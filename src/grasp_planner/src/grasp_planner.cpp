@@ -4,18 +4,22 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <chrono>
+#include <thread>
 
 #include <Eigen/Geometry>
 
-sensor_msgs::msg::CameraInfo getCameraInfo(uint32_t width, uint32_t height, float f) {
-    sensor_msgs::msg::CameraInfo info ;
-    info.width = width ;
-    info.height = height ;
- 
+using namespace std ;
+
+sensor_msgs::msg::CameraInfo getCameraInfo(uint32_t width, uint32_t height, float f)
+{
+    sensor_msgs::msg::CameraInfo info;
+    info.width = width;
+    info.height = height;
+
     info.k.at(0) = f;
-    info.k.at(2) = width/2.0;
+    info.k.at(2) = width / 2.0;
     info.k.at(4) = f;
-    info.k.at(5) = height/2.0;
+    info.k.at(5) = height / 2.0;
     info.k.at(8) = 1;
 
     info.p.at(0) = info.k.at(0);
@@ -50,106 +54,66 @@ sensor_msgs::msg::CameraInfo getCameraInfo(uint32_t width, uint32_t height, floa
     {
         info.d.at(i) = 0.0;
     }
-    return info ;
+    return info;
 }
 
 using namespace std::literals::chrono_literals;
-
-class GraspNetClient : public rclcpp::Node
-{
-public:
-    using GraspNet = grasp_planner_interfaces::srv::GraspNet;
-
-    GraspNetClient(const cv::Mat &rgb, const cv::Mat &depth, rclcpp::NodeOptions nh = rclcpp::NodeOptions()) : 
-    rgb_(rgb), depth_(depth), rclcpp::Node("graspnet_client_node", nh)
-    {
-
-        client_ = create_client<GraspNet>("graspnet");
-       
-    }
-
-   
-    void sendRequest()
-    {
-        
-
-        auto request = std::make_shared<GraspNet::Request>();
-
-        std_msgs::msg::Header header; // empty header
-        header.stamp = get_clock()->now();
-        header.frame_id = "camera" ;
-        
-        auto rgb_bridge = std::make_shared<cv_bridge::CvImage>(header, sensor_msgs::image_encodings::BGR8, rgb_.clone());
-        rgb_bridge->toImageMsg(request->rgb);
-
- // Convert OpenCV Mat to ROS Image
-
-
-        auto width = rgb_.cols ;
-        auto height = rgb_.rows ;
-
-    request->rgb.height = height;
-    request->rgb.width = width;
-    request->rgb.is_bigendian = false;
-    request->rgb.step = width * rgb_.elemSize();
-       
-        auto depth_bridge = std::make_shared<cv_bridge::CvImage>(header, sensor_msgs::image_encodings::MONO16, depth_.clone());
-        depth_bridge->toImageMsg(request->depth);
-
-        float f = 500.0f;
-
-        request->camera_info = getCameraInfo(width, height, f) ;
-
-        while (!client_->wait_for_service(1s))
-        {
-            if (!rclcpp::ok())
-            {
-                RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
-                return;
-            }
-            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
-        }
-
-
-        auto result = client_->async_send_request(request);
-        result.get() ;
-        // Wait for the result.
-      /*  if (rclcpp::spin_until_future_complete(shared_from_this(), result) ==
-            rclcpp::FutureReturnCode::SUCCESS)
-        {
-            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
-        }
-        else
-        {
-        }
-        */
-    }
-
-private:
-    rclcpp::Client<GraspNet>::SharedPtr client_;
-    cv::Mat rgb_, depth_ ;
-   
-};
+using GraspNet = grasp_planner_interfaces::srv::GraspNet;
 
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
 
+    cv::Mat rgb = cv::imread("./data/color.png");
+    cv::Mat depth = cv::imread("./data/depth.png", -1);
 
-auto rgb = cv::imread("data/color.png") ;
-auto depth = cv::imread("data/depth.png", -1) ;
+    std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared("graspnet_client_node");
 
-    auto graspnet_client = std::make_shared<GraspNetClient>(rgb, depth);
+    auto client = node->create_client<GraspNet>("graspnet");
 
-    auto timer_node = std::make_shared<rclcpp::Node>() ;
+    auto request = std::make_shared<GraspNet::Request>();
 
-   auto timer = timer_node->create_wall_timer( 1500ms, [&](){
-    graspnet_client->sendRequest() ;
-   });
+    std_msgs::msg::Header header; // empty header
+    header.stamp = node->get_clock()->now();
+    header.frame_id = "camera";
+
+    auto rgb_bridge = std::make_shared<cv_bridge::CvImage>(header, sensor_msgs::image_encodings::BGR8, rgb.clone());
+    rgb_bridge->toImageMsg(request->rgb);
+
+    // Convert OpenCV Mat to ROS Image
+
+    auto width = rgb.cols;
+    auto height = rgb.rows;
+
+    auto depth_bridge = std::make_shared<cv_bridge::CvImage>(header, sensor_msgs::image_encodings::MONO16, depth.clone());
+    depth_bridge->toImageMsg(request->depth);
+
+    float f = 500.0f;
+
+    request->camera_info = getCameraInfo(width, height, f);
+
+    while (!client->wait_for_service(1s))
+    {
+        if (!rclcpp::ok())
+        {
+            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
+            return 0;
+        }
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
+    }
+
+    auto result = client->async_send_request(request);
+
    
-   rclcpp::executors::MultiThreadedExecutor executor;
-    executor.add_node(graspnet_client);
-   executor.add_node(timer_node);
-    executor.spin() ;
+    // Wait for the result.
+    if (rclcpp::spin_until_future_complete(node, result, std::chrono::milliseconds(1000)) ==
+        rclcpp::FutureReturnCode::SUCCESS)
+    {
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
+    }
+    else
+    {
+    }
+
     rclcpp::shutdown();
 }

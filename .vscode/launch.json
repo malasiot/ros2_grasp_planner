@@ -14,10 +14,13 @@
     "type": "cppdbg",
     "request": "launch",
     "program": "${workspaceFolder}/install/lib/grasp_planner/grasp_planner_service",
+   
     "args": [],
     "stopAtEntry": true,
     "cwd": "${workspaceFolder}/src/grasp_planner/",
-    "environment": [],
+    "environment": [
+      {"name":"RMW_IMPLEMENTATION", "value":"rmw_cyclonedds_cpp"}
+    ],
     "externalConsole": false,
     "MIMode": "gdb",
     "setupCommands": [
