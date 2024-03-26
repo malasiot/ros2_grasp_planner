@@ -7,5 +7,9 @@
         "/opt/ros/humble/lib/python3.10/site-packages",
         "/opt/ros/humble/local/lib/python3.10/dist-packages"
     ],
-    "cmake.sourceDirectory": "/workspaces/grasp_ws/src/grasp_planner"
+    "cmake.sourceDirectory": "/workspaces/grasp_ws/src/grasp_planner",
+    "cmake.configureOnOpen": false,
+    "files.associations": {
+        "chrono": "cpp"
+    }
 }

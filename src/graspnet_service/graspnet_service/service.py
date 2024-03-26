@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from grasp_planner_interfaces.srv import GraspNet
+from cv_bridge import CvBridge
 
 import rclpy
 from rclpy.node import Node
@@ -25,9 +26,13 @@ class GraspNetService(Node):
         self.srv = self.create_service(GraspNet, 'graspnet', self.graspnet_callback)
 
     def graspnet_callback(self, request, response):
-        response.sum = request.a + request.b
-        self.get_logger().info('Incoming request\na: %d b: %d' % (request.a, request.b))
+        bridge = CvBridge()
+        rgb_image = bridge.imgmsg_to_cv2(request.rgb, desired_encoding='bgr8')
+        depth_image = bridge.imgmsg_to_cv2(request.depth, desired_encoding='mono16')
+        camera_info = request.camera_info
 
+        print(rgb_image) ;
+      
         return response
 
 
