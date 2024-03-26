@@ -32,6 +32,30 @@
             "ignoreFailures": true
         }
     ]
+  },
+  {
+    "name": "Launch graspnet client",
+    "type": "cppdbg",
+    "request": "launch",
+    "program": "${workspaceFolder}/install/lib/grasp_planner/grasp_planner_client",
+    "args": [],
+    "stopAtEntry": true,
+    "cwd": "${workspaceFolder}/src/grasp_planner/",
+    "environment": [],
+    "externalConsole": false,
+    "MIMode": "gdb",
+    "setupCommands": [
+        {
+            "description": "Enable pretty-printing for gdb",
+            "text": "-enable-pretty-printing",
+            "ignoreFailures": true
+        },
+        {
+            "description": "Set Disassembly Flavor to Intel",
+            "text": "-gdb-set disassembly-flavor intel",
+            "ignoreFailures": true
+        }
+    ]
   }
   ]
 }

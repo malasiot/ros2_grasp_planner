@@ -33,7 +33,26 @@ ament_target_dependencies(grasp_planner_service
 )
 target_link_libraries(grasp_planner_service ${OpenCV_LIBS} Eigen3::Eigen)
 
-install(TARGETS grasp_planner_service
+add_executable(grasp_planner_client
+    src/grasp_planner_client.cpp
+    )
+
+target_include_directories(grasp_planner_client PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+ 
+  ${OpenCV_INCLUDE_DIRS})
+target_compile_features(grasp_planner_client PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+
+ament_target_dependencies(grasp_planner_client
+  rclcpp  std_msgs sensor_msgs geometry_msgs 
+  cv_bridge Eigen3
+  grasp_planner_interfaces
+)
+target_link_libraries(grasp_planner_client ${OpenCV_LIBS} Eigen3::Eigen)
+
+
+install(TARGETS grasp_planner_service grasp_planner_client
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
