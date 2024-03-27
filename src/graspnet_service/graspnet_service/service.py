@@ -33,46 +33,40 @@ from PIL import Image
 import torch
 from graspnetAPI import GraspGroup
 
-ROOT_DIR =  os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT_DIR =  os.path.dirname(os.path.abspath(__file__))
 
 sys.path.append(os.path.join(ROOT_DIR, 'models'))
-sys.path.append(os.path.join(ROOT_DIR, 'dataset'))
 sys.path.append(os.path.join(ROOT_DIR, 'utils'))
 
 from graspnet import GraspNet, pred_decode
-from graspnet_dataset import GraspNetDataset
 from collision_detector import ModelFreeCollisionDetector
 from data_utils import CameraInfo, create_point_cloud_from_depth_image
-
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--checkpoint_path', required=False, help='Model checkpoint path', 
-                    default=os.path.join(get_package_share_directory("graspnet_service"), "weights/checkpoint-rs.tar"))
-parser.add_argument('--num_point', type=int, default=20000, help='Point Number [default: 20000]')
-parser.add_argument('--num_view', type=int, default=300, help='View Number [default: 300]')
-parser.add_argument('--collision_thresh', type=float, default=0.01, help='Collision Threshold in collision detection [default: 0.01]')
-parser.add_argument('--voxel_size', type=float, default=0.01, help='Voxel Size to process point clouds before collision detection [default: 0.01]')
-cfgs = parser.parse_args()
 
 class GraspNetService(Node):
     def get_net(self):
         # Init the model
-        net = GraspNet(input_feature_dim=0, num_view=cfgs.num_view, num_angle=12, num_depth=4,
+        num_view = self.get_parameter('num_view').value
+        checkpoint_path = self.get_parameter('checkpoint_path').value
+        
+        net = GraspNet(input_feature_dim=0, num_view=num_view, num_angle=12, num_depth=4,
             cylinder_radius=0.05, hmin=-0.02, hmax_list=[0.01,0.02,0.03,0.04], is_training=False)
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         net.to(device)
         # Load checkpoint
-        checkpoint = torch.load(cfgs.checkpoint_path)
+        checkpoint = torch.load(checkpoint_path)
         net.load_state_dict(checkpoint['model_state_dict'])
         start_epoch = checkpoint['epoch']
-        print("-> loaded checkpoint %s (epoch: %d)"%(cfgs.checkpoint_path, start_epoch))
+        print("-> loaded checkpoint %s (epoch: %d)"%(checkpoint_path, start_epoch))
         # set model to eval mode
         net.eval()
         return net
     
     def get_and_process_data(self, color, depth, camera_info):
+        
+        num_point = self.get_parameter('num_point').value 
+        
         # load data
-        data_dir = "/workspaces/grasp_ws/src/graspnet_service/doc/example_data/"
+        data_dir = "/workspaces/ros2_grasp_planner/src/graspnet_service/doc/example_data/"
         #color = np.array(Image.open(os.path.join(data_dir, 'color.png')), dtype=np.float32) / 255.0
         #depth = np.array(Image.open(os.path.join(data_dir, 'depth.png')))
         color = color.astype(np.float32)/255.0 ;
@@ -94,11 +88,11 @@ class GraspNetService(Node):
         color_masked = color[mask]
 
         # sample points
-        if len(cloud_masked) >= cfgs.num_point:
-            idxs = np.random.choice(len(cloud_masked), cfgs.num_point, replace=False)
+        if len(cloud_masked) >= num_point:
+            idxs = np.random.choice(len(cloud_masked), num_point, replace=False)
         else:
             idxs1 = np.arange(len(cloud_masked))
-            idxs2 = np.random.choice(len(cloud_masked), cfgs.num_point-len(cloud_masked), replace=True)
+            idxs2 = np.random.choice(len(cloud_masked), num_point-len(cloud_masked), replace=True)
             idxs = np.concatenate([idxs1, idxs2], axis=0)
         cloud_sampled = cloud_masked[idxs]
         color_sampled = color_masked[idxs]
@@ -126,13 +120,23 @@ class GraspNetService(Node):
         return gg
 
     def collision_detection(self, gg, cloud):
-        mfcdetector = ModelFreeCollisionDetector(cloud, voxel_size=cfgs.voxel_size)
-        collision_mask = mfcdetector.detect(gg, approach_dist=0.05, collision_thresh=cfgs.collision_thresh)
+        voxel_size = self.get_parameter('voxel_size').value
+        collision_thresh = self.get_parameter('collision_thresh').value
+        
+        mfcdetector = ModelFreeCollisionDetector(cloud, voxel_size=voxel_size)
+        collision_mask = mfcdetector.detect(gg, approach_dist=0.05, collision_thresh=collision_thresh)
         gg = gg[~collision_mask]
         return gg
     
     def __init__(self):
         super().__init__('graspnet_service_node')
+        
+        self.declare_parameter('checkpoint_path', os.path.join(get_package_share_directory("graspnet_service"), "weights/checkpoint-rs.tar")) 
+        self.declare_parameter('num_point', 20000)
+        self.declare_parameter('num_view', 300)
+        self.declare_parameter('collision_thresh', 0.01)
+        self.declare_parameter('voxel_size', 0.01)
+    
         self.net = self.get_net()
         self.srv = self.create_service(GraspNetInterface, 'graspnet', self.graspnet_callback)
 
@@ -143,7 +147,8 @@ class GraspNetService(Node):
         camera_info = request.camera_info
         end_points, cloud = self.get_and_process_data(rgb_image, depth_image, camera_info)
         gg = self.get_grasps(end_points)
-        if cfgs.collision_thresh > 0:
+        
+        if self.get_parameter('collision_thresh').value > 0:
             gg = self.collision_detection(gg, np.array(cloud.points))
 
         gg.nms()

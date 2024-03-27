@@ -106,13 +106,16 @@ int main(int argc, char *argv[])
 
    
     // Wait for the result.
-    if (rclcpp::spin_until_future_complete(node, result, std::chrono::milliseconds(1000)) ==
+    if (rclcpp::spin_until_future_complete(node, result) ==
         rclcpp::FutureReturnCode::SUCCESS)
     {
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
+        auto response = result.get();
+        cout << response->grasps.size() << endl ;
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "response ok");
     }
     else
     {
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "response error");
     }
 
     rclcpp::shutdown();
