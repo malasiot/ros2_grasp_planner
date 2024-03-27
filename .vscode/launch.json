@@ -6,7 +6,8 @@
         "type": "python",
         "request": "launch",
         "program": "${file}",
-        "console": "integratedTerminal",
+        "console": "integratedTerminal"
+         
     },
 
   {
@@ -19,7 +20,7 @@
     "stopAtEntry": true,
     "cwd": "${workspaceFolder}/src/grasp_planner/",
     "environment": [
-      {"name":"RMW_IMPLEMENTATION", "value":"rmw_cyclonedds_cpp"}
+      
     ],
     "externalConsole": false,
     "MIMode": "gdb",

@@ -9,7 +9,7 @@ import torch.nn as nn
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(BASE_DIR)
 sys.path.append(ROOT_DIR)
-sys.path.append(os.path.join(ROOT_DIR, 'pointnet2'))
+sys.path.append(os.path.join(ROOT_DIR, 'pnet2'))
 
 from pointnet2_modules import PointnetSAModuleVotes, PointnetFPModule
 

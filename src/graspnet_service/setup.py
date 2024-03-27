@@ -7,7 +7,7 @@ package_name = 'graspnet_service'
 setup(
     name=package_name,
     version='0.19.1',
-    packages=[package_name],
+    packages=[package_name, package_name + '/models', package_name + '/utils', package_name + '/knn', package_name + '/pnet2'],
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
