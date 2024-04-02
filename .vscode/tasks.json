@@ -4,13 +4,30 @@
     {
       "label": "build",
       "type": "shell",
-      "command": "./build.sh",
+      "command": "./build.sh"
     },
     {
       "label": "test",
       "type": "shell",
       "command": "colcon test && colcon test-result"
+    },
+    {
+      "label": "Build single package",
+      "detail": "Build single ROS 2 package with debug symbols",
+      "type": "shell",
+      "command": "colcon build --symlink-install --packages-select ${input:package} --merge-install --cmake-args '-DCMAKE_BUILD_TYPE=Debug' --cmake-args '-DCMAKE_EXPORT_COMPILE_COMMANDS=On'",
+      "group": "build",
+      "problemMatcher": "$gcc"
+  },
+    
+  ],
+    "inputs": [
+    {
+        "id": "package",
+        "type": "promptString",
+        "description": "Package name",
+        "default": "grasp_planner"
     }
-  ]
+]
 }
 

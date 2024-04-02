@@ -14,6 +14,7 @@ find_package(rclcpp REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV 4 REQUIRED core imgproc)
 find_package(cv_bridge REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 add_executable(grasp_planner_service
     src/grasp_planner.cpp
@@ -29,6 +30,7 @@ target_compile_features(grasp_planner_service PUBLIC c_std_99 cxx_std_17)  # Req
 ament_target_dependencies(grasp_planner_service
   rclcpp  std_msgs sensor_msgs geometry_msgs 
   cv_bridge Eigen3
+  visualization_msgs
   grasp_planner_interfaces
 )
 target_link_libraries(grasp_planner_service ${OpenCV_LIBS} Eigen3::Eigen)

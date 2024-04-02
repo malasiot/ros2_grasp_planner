@@ -13,21 +13,23 @@
         "--cap-add=SYS_PTRACE",
         "--security-opt", "seccomp=unconfined",
         "--gpus", "all",
-        "--network=host",
+    /*    "--network=host",
         "--ipc=host",
         "--pid=host",
         "-e", "DISPLAY=${env:DISPLAY}"
+        */
     ],
-     "containerEnv": {
+ /*    "containerEnv": {
         "DISPLAY": "unix:0",
         "ROS_AUTOMATIC_DISCOVERY_RANGE": "LOCALHOST",
         "ROS_DOMAIN_ID": "42"
     },
     "mounts": [
        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
-        "source=/dev/dri,target=/dev/dri,type=bind,consistency=cached"
+        "source=/dev/dri,target=/dev/dri,type=bind,consistency=cached",
+        "source=/dev/shm,target=/dev/shm,type=bind,consistency=cached"
     ],
-    
+    */
     // These are the extensions I like to use with ROS2
     "extensions": [
         "ms-azuretools.vscode-docker",

@@ -37,7 +37,7 @@ def create_point_cloud_from_depth_image(depth, camera, organized=True):
     points_z = depth / camera.scale
     points_x = (xmap - camera.cx) * points_z / camera.fx
     points_y = (ymap - camera.cy) * points_z / camera.fy
-    cloud = np.stack([points_x, points_y, points_z], axis=-1)
+    cloud = np.stack([points_x, points_y, points_z], axis=-1);
     if not organized:
         cloud = cloud.reshape([-1, 3])
     return cloud

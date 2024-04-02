@@ -31,7 +31,7 @@ import scipy.io as scio
 from PIL import Image
 
 import torch
-from graspnetAPI import GraspGroup
+from graspnetAPI import GraspGroup, Grasp
 
 ROOT_DIR =  os.path.dirname(os.path.abspath(__file__))
 
@@ -64,22 +64,23 @@ class GraspNetService(Node):
     def get_and_process_data(self, color, depth, camera_info):
         
         num_point = self.get_parameter('num_point').value 
+        factor_depth = self.get_parameter('factor_depth').value 
         
         # load data
-        data_dir = "/workspaces/ros2_grasp_planner/src/graspnet_service/doc/example_data/"
+        data_dir = "/workspaces/grasp_ws/src/graspnet_service/doc/example_data/"
         #color = np.array(Image.open(os.path.join(data_dir, 'color.png')), dtype=np.float32) / 255.0
         #depth = np.array(Image.open(os.path.join(data_dir, 'depth.png')))
         color = color.astype(np.float32)/255.0 ;
         workspace_mask = np.array(Image.open(os.path.join(data_dir, 'workspace_mask.png')))
         meta = scio.loadmat(os.path.join(data_dir, 'meta.mat'))
-        intrinsic = meta['intrinsic_matrix']
+      
         k = camera_info.k.reshape(3, 3);
-        factor_depth = meta['factor_depth']
-
+       
         height, width, _ = color.shape ;
+        workspace_mask = np.ones((height, width), dtype=bool)
         
         # generate cloud
-        camera = CameraInfo(width, height, intrinsic[0][0], intrinsic[1][1], intrinsic[0][2], intrinsic[1][2], factor_depth)
+        camera = CameraInfo(width, height, k[0][0], k[1][1], k[0][2], k[1][2], factor_depth)
         cloud = create_point_cloud_from_depth_image(depth, camera, organized=True)
 
         # get valid points
@@ -136,6 +137,8 @@ class GraspNetService(Node):
         self.declare_parameter('num_view', 300)
         self.declare_parameter('collision_thresh', 0.01)
         self.declare_parameter('voxel_size', 0.01)
+        self.declare_parameter('factor_depth', 3000.0)
+        self.declare_parameter('score_thresh', 0.8)
     
         self.net = self.get_net()
         self.srv = self.create_service(GraspNetInterface, 'graspnet', self.graspnet_callback)
@@ -154,17 +157,25 @@ class GraspNetService(Node):
         gg.nms()
         gg.sort_by_score()
     
+        score_threshold = self.get_parameter("score_thresh").value ;
+        grippers = []
+       
+        scale_factor = self.get_parameter('factor_depth').value / 1000.0
+
         for grasp in gg.grasp_group_array:
-            msg = GraspInterface() ;
-            msg.score = float(grasp[0]) ;
-            msg.width = float(grasp[1]) ;
-            msg.height = float(grasp[2]) ;
-            msg.depth = float(grasp[3]) ;
-            msg.rotation = grasp[4:13].tolist()
-            msg.translation = grasp[13:16].tolist()
-            response.grasps.append(msg)
-        #grippers = gg.to_open3d_geometry_list()
-        #o3d.visualization.draw_geometries([cloud, *grippers])
+            if grasp[0] > score_threshold:
+                msg = GraspInterface() ;
+                msg.score = float(grasp[0]) ;
+                msg.width = float(grasp[1] * scale_factor) ;
+                msg.height = float(grasp[2] * scale_factor) ;
+                msg.depth = float(grasp[3] * scale_factor) ;
+                msg.rotation = grasp[4:13].tolist()
+                msg.translation = grasp[13:16].tolist()
+                msg.translation *= scale_factor 
+                grippers.append(Grasp(grasp).to_open3d_geometry()) ;
+                response.grasps.append(msg)
+       # grippers = ggg.to_open3d_geometry_list()
+        o3d.visualization.draw_geometries([cloud, *grippers])
         return response
 
 

@@ -14,9 +14,9 @@
     "name": "Launch graspnet",
     "type": "cppdbg",
     "request": "launch",
-    "program": "${workspaceFolder}/install/lib/grasp_planner/grasp_planner_service",
+    "program": "${workspaceFolder}/build/grasp_planner/grasp_planner_service",
    
-    "args": [],
+    "args": ["data/cap_00000_c.png", "data/cap_00000_d.png"],
     "stopAtEntry": true,
     "cwd": "${workspaceFolder}/src/grasp_planner/",
     "environment": [
@@ -38,13 +38,13 @@
     ]
   },
   {
-    "name": "Launch graspnet client",
+    "name": "Launch virtual camera",
     "type": "cppdbg",
     "request": "launch",
-    "program": "${workspaceFolder}/install/lib/grasp_planner/grasp_planner_client",
-    "args": [],
+    "program": "${workspaceFolder}/install/lib/ros2_virtual_camera/virtual_camera",
+    "args": ["model.urdf", "mesh.urdf"],
     "stopAtEntry": true,
-    "cwd": "${workspaceFolder}/src/grasp_planner/",
+    "cwd": "${workspaceFolder}/",
     "environment": [],
     "externalConsole": false,
     "MIMode": "gdb",
