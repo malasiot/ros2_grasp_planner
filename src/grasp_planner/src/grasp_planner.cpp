@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
 
- 
+ cout << argv[1] << ' ' << argv[2] << endl ;
 
     cv::Mat rgb = cv::imread(argv[1]);
     cv::Mat depth = cv::imread(argv[2], -1);

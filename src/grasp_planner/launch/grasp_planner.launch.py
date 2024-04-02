@@ -225,6 +225,8 @@ def generate_launch_description():
         [FindPackageShare(description_package), "moveit2", "dual_kinematics.yaml"]
     )
 
+    package_share_directory = get_package_share_directory('grasp_planner')
+    print(package_share_directory) ;
     grasp_planning_node = Node(
         package="grasp_planner",
         executable="grasp_planner_service",
@@ -234,8 +236,8 @@ def generate_launch_description():
             robot_description,
             robot_description_kinematics,
         ],
-        arguments=[os.path.join(package_share_directory, 'data/cap_00000_c.png'), 
-                   os.path.join(package_share_directory, 'data/cap_00000_c.png')]
+        arguments=[package_share_directory + '/data/cap_00000_c.png', 
+                   package_share_directory + '/data/cap_00000_c.png']
     )
     
     nodes = [
