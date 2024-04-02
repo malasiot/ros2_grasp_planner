@@ -15,9 +15,10 @@ find_package(Eigen3 REQUIRED)
 find_package(OpenCV 4 REQUIRED core imgproc)
 find_package(cv_bridge REQUIRED)
 find_package(visualization_msgs REQUIRED)
+find_package(moveit_ros_planning_interface REQUIRED)
 
 add_executable(grasp_planner_service
-    src/grasp_planner.cpp
+    src/grasp_planner.cpp src/viz.cpp
     )
 
 target_include_directories(grasp_planner_service PUBLIC
@@ -31,31 +32,18 @@ ament_target_dependencies(grasp_planner_service
   rclcpp  std_msgs sensor_msgs geometry_msgs 
   cv_bridge Eigen3
   visualization_msgs
+  moveit_ros_planning_interface
   grasp_planner_interfaces
 )
 target_link_libraries(grasp_planner_service ${OpenCV_LIBS} Eigen3::Eigen)
 
-add_executable(grasp_planner_client
-    src/grasp_planner_client.cpp
-    )
-
-target_include_directories(grasp_planner_client PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>
- 
-  ${OpenCV_INCLUDE_DIRS})
-target_compile_features(grasp_planner_client PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
-
-ament_target_dependencies(grasp_planner_client
-  rclcpp  std_msgs sensor_msgs geometry_msgs 
-  cv_bridge Eigen3
-  grasp_planner_interfaces
-)
-target_link_libraries(grasp_planner_client ${OpenCV_LIBS} Eigen3::Eigen)
-
-
-install(TARGETS grasp_planner_service grasp_planner_client
+install(TARGETS grasp_planner_service
   DESTINATION lib/${PROJECT_NAME})
+
+install(
+  DIRECTORY launch data
+  DESTINATION share/${PROJECT_NAME}
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
