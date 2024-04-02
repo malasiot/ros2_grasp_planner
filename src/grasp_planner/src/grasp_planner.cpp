@@ -2,6 +2,17 @@
 #include <cv_bridge/cv_bridge.h>
 #include <grasp_planner_interfaces/srv/grasp_net.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
+
+#include <moveit/robot_model_loader/robot_model_loader.h>
+#include <moveit/robot_state/conversions.h>
+#include <moveit/planning_pipeline/planning_pipeline.h>
+#include <moveit/planning_interface/planning_interface.h>
+#include <moveit/planning_scene_monitor/planning_scene_monitor.h>
+#include <moveit/kinematic_constraints/utils.h>
+#include <moveit_msgs/msg/display_trajectory.hpp>
+#include <moveit_msgs/msg/planning_scene.hpp>
+
+
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <chrono>
@@ -11,6 +22,11 @@
 
 using namespace std ;
 using namespace Eigen ;
+
+extern visualization_msgs::msg::MarkerArray convertToVisualGraspMsg(
+  const std::vector<grasp_planner_interfaces::msg::Grasp> & hands,
+  double hand_length, double finger_width, double finger_height,
+  const std::string & frame_id) ;
 
 sensor_msgs::msg::CameraInfo getCameraInfo(uint32_t width, uint32_t height, float f)
 {
@@ -59,204 +75,64 @@ sensor_msgs::msg::CameraInfo getCameraInfo(uint32_t width, uint32_t height, floa
     return info;
 }
 
-visualization_msgs::msg::Marker createHandBaseMarker(
-  const Eigen::Vector3d & start,
-  const Eigen::Vector3d & end, const Eigen::Matrix3d & frame, double length, double height, int id,
-  const std::string & frame_id)
-{
-  Eigen::Vector3d center = start + 0.5 * (end - start);
-
-  visualization_msgs::msg::Marker marker;
-  marker.header.frame_id = frame_id;
-  marker.header.stamp = rclcpp::Clock(RCL_ROS_TIME).now();
-  marker.ns = "hand_base";
-  marker.id = id;
-  marker.type = visualization_msgs::msg::Marker::CUBE;
-  marker.action = visualization_msgs::msg::Marker::ADD;
-  marker.pose.position.x = center(0);
-  marker.pose.position.y = center(1);
-  marker.pose.position.z = center(2);
-  marker.lifetime = rclcpp::Duration(0, 0);
-
-  // use orientation of hand frame
-  Eigen::Quaterniond quat(frame);
-  marker.pose.orientation.x = quat.x();
-  marker.pose.orientation.y = quat.y();
-  marker.pose.orientation.z = quat.z();
-  marker.pose.orientation.w = quat.w();
-
-  // these scales are relative to the hand frame (unit: meters)
-  marker.scale.x = length;  // forward direction
-  marker.scale.y = (end - start).norm();  // hand closing direction
-  marker.scale.z = height;  // hand vertical direction
-
-  marker.color.a = 0.5;
-  marker.color.r = 0.0;
-  marker.color.g = 0.0;
-  marker.color.b = 1.0;
-
-  return marker;
-}
-
-
-visualization_msgs::msg::Marker createFingerMarker(
-  const Eigen::Vector3d & center,
-  const Eigen::Matrix3d & frame, double length, double width, double height, int id,
-  const std::string & frame_id)
-{
-  visualization_msgs::msg::Marker marker;
-  marker.header.frame_id = frame_id;
-  marker.header.stamp = rclcpp::Clock(RCL_ROS_TIME).now();
-  marker.ns = "finger";
-  marker.id = id;
-  marker.type = visualization_msgs::msg::Marker::CUBE;
-  marker.action = visualization_msgs::msg::Marker::ADD;
-  marker.pose.position.x = center(0);
-  marker.pose.position.y = center(1);
-  marker.pose.position.z = center(2);
-  marker.lifetime = rclcpp::Duration(0, 0);
-
-  // use orientation of hand frame
-  Eigen::Quaterniond quat(frame);
-  marker.pose.orientation.x = quat.x();
-  marker.pose.orientation.y = quat.y();
-  marker.pose.orientation.z = quat.z();
-  marker.pose.orientation.w = quat.w();
-
-  // these scales are relative to the hand frame (unit: meters)
-  marker.scale.x = length;  // forward direction
-  marker.scale.y = width;  // hand closing direction
-  marker.scale.z = height;  // hand vertical direction
-
-  marker.color.a = 0.5;
-  marker.color.r = 0.0;
-  marker.color.g = 0.0;
-  marker.color.b = 0.5;
-
-  return marker;
-}
-
-
-
-visualization_msgs::msg::MarkerArray convertToVisualGraspMsg(
-  const std::vector<grasp_planner_interfaces::msg::Grasp> & hands,
-  double outer_diameter, double hand_depth, double finger_width, double hand_height,
-  const std::string & frame_id)
-{
-  double width = outer_diameter;
-  double hw = 0.5 * width;
-
-  visualization_msgs::msg::MarkerArray marker_array;
-  visualization_msgs::msg::Marker left_finger, right_finger, base, hand;
-  Eigen::Vector3d left_bottom, right_bottom, left_top, right_top, left_center, right_center,
-    approach_center,
-    base_center;
-
-  for (uint32_t i = 0; i < hands.size(); i++) {
-    const auto &trv = hands[i].translation ;
-    const auto &rotv = hands[i].rotation ;
-
-    Eigen::Vector3d tr(trv[0], trv[1], trv[2]) ;
-    Eigen::Matrix3d rot ;
-    rot << rotv[0], rotv[1], rotv[2], 
-            rotv[3], rotv[4], rotv[5],
-            rotv[6], rotv[7], rotv[8] ;
-
-   
-    auto approach = rot.col(0) ;
-    auto binormal = -rot.col(1) ;
- double hw = 0.5 * hands[i].width;
-    left_bottom =  tr - (hw - 0.5 * finger_width) * binormal;
-    right_bottom = tr + (hw - 0.5 * finger_width) * binormal;
-     left_top = left_bottom + hand_depth * approach;
-    right_top = right_bottom + hand_depth * approach;
-    left_center = left_bottom + 0.5 * (left_top - left_bottom);
-    right_center = right_bottom + 0.5 * (right_top - right_bottom);
-    base_center = left_bottom + 0.5 * (right_bottom - left_bottom) - 0.01 * approach;
-    approach_center = base_center - 0.04 * approach;
-
-    base = createHandBaseMarker(left_bottom, right_bottom,
-        rot, 0.02, hand_height, i, frame_id);
-
-         left_finger = createFingerMarker(left_center,
-        rot, hand_depth, finger_width, hand_height, i * 3, frame_id);
-    right_finger = createFingerMarker(right_center,
-        rot, hand_depth, finger_width, hand_height, i * 3 + 1, frame_id);
-    hand = createFingerMarker(approach_center,
-        rot, 0.08, finger_width, hand_height, i * 3 + 2, frame_id);
-  /*  marker.header.frame_id = frame_id;
-    marker.header.stamp = rclcpp::Clock(RCL_ROS_TIME).now();
-    marker.ns = "finger";
-    marker.id = i;
-    marker.type = visualization_msgs::msg::Marker::CUBE;
-    marker.action = visualization_msgs::msg::Marker::ADD;
-    marker.pose.position.x = tr.x();
-    marker.pose.position.y = tr.y();
-    marker.pose.position.z = tr.z();
-    marker.lifetime = rclcpp::Duration(0, 0);
-
-  // use orientation of hand frame
-    Eigen::Quaterniond quat(rot);
-    marker.pose.orientation.x = quat.x();
-    marker.pose.orientation.y = quat.y();
-    marker.pose.orientation.z = quat.z();
-    marker.pose.orientation.w = quat.w();
-
-    // these scales are relative to the hand frame (unit: meters)
-    marker.scale.x = 0.01;  // forward direction
-    marker.scale.y = hands[i].width;  // hand closing direction
-    marker.scale.z = 0.01;  // hand vertical direction
-
-    marker.color.a = 0.5;
-    marker.color.r = 0.0;
-    marker.color.g = 0.0;
-    marker.color.b = 0.5;
-*/
-    marker_array.markers.push_back(base);
-     marker_array.markers.push_back(left_finger);
-      marker_array.markers.push_back(right_finger);
-       marker_array.markers.push_back(hand);
-
-  /*  left_bottom = hands[i].getGraspBottom() - (hw - 0.5 * finger_width) * hands[i].getBinormal();
-    right_bottom = hands[i].getGraspBottom() + (hw - 0.5 * finger_width) * hands[i].getBinormal();
-    left_top = left_bottom + hand_depth * hands[i].getApproach();
-    right_top = right_bottom + hand_depth * hands[i].getApproach();
-    left_center = left_bottom + 0.5 * (left_top - left_bottom);
-    right_center = right_bottom + 0.5 * (right_top - right_bottom);
-    base_center = left_bottom + 0.5 * (right_bottom - left_bottom) - 0.01 * hands[i].getApproach();
-    approach_center = base_center - 0.04 * hands[i].getApproach();
-
-    base = createHandBaseMarker(left_bottom, right_bottom,
-        hands[i].getFrame(), 0.02, hand_height, i, frame_id);
-    left_finger = createFingerMarker(left_center,
-        hands[i].getFrame(), hand_depth, finger_width, hand_height, i * 3, frame_id);
-    right_finger = createFingerMarker(right_center,
-        hands[i].getFrame(), hand_depth, finger_width, hand_height, i * 3 + 1, frame_id);
-    approach = createFingerMarker(approach_center,
-        hands[i].getFrame(), 0.08, finger_width, hand_height, i * 3 + 2, frame_id);
-
-    marker_array.markers.push_back(left_finger);
-    marker_array.markers.push_back(right_finger);
-    marker_array.markers.push_back(approach);
-    marker_array.markers.push_back(base);
-    */
-  }
-
-  return marker_array;
-}
-
 
 using namespace std::literals::chrono_literals;
 using GraspNet = grasp_planner_interfaces::srv::GraspNet;
+
+void validateGrasps(const std::vector<grasp_planner_interfaces::msg::Grasp> &grasps) {
+}
+  
 
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
 
+ 
+
     cv::Mat rgb = cv::imread(argv[1]);
     cv::Mat depth = cv::imread(argv[2], -1);
 
     std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared("graspnet_client_node");
+
+   robot_model_loader::RobotModelLoader robot_model_loader(node);
+   moveit::core::RobotModelPtr kinematic_model = robot_model_loader.getModel();
+   RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Model frame: %s", kinematic_model->getModelFrame().c_str());
+
+    moveit::core::RobotStatePtr kinematic_state(new moveit::core::RobotState(kinematic_model));
+    kinematic_state->setToDefaultValues();
+    const moveit::core::JointModelGroup* joint_model_group = kinematic_model->getJointModelGroup("l_iiwa_arm");
+
+    const std::vector<std::string> &joint_names = joint_model_group->getJointModelNames();
+
+    std::vector<double> joint_values;
+    kinematic_state->copyJointGroupPositions(joint_model_group, joint_values);
+    for(std::size_t i = 0; i < joint_names.size(); ++i)
+    {
+      RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Joint %s: %f", joint_names[i].c_str(), joint_values[i]);
+    }
+
+    kinematic_state->setToRandomPositions(joint_model_group);
+    const Eigen::Isometry3d &end_effector_state = kinematic_state->getGlobalLinkTransform("l_tool0");
+
+  /* Print end-effector pose. Remember that this is in the model frame */
+  RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), "Translation: " << end_effector_state.translation());
+RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), "Rotation: " << end_effector_state.rotation());
+
+bool found_ik = kinematic_state->setFromIK(joint_model_group, end_effector_state, 10);
+
+
+if (found_ik)
+{
+  kinematic_state->copyJointGroupPositions(joint_model_group, joint_values);
+  for(std::size_t i=0; i < joint_names.size(); ++i)
+  {
+    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Joint %s: %f", joint_names[i].c_str(), joint_values[i]);
+  }
+}
+else
+{
+  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Did not find IK solution");
+}
 
     auto grasps_rviz_pub = node->create_publisher<visualization_msgs::msg::MarkerArray>(
      "/visual_grasps", 10);
@@ -304,8 +180,7 @@ int main(int argc, char *argv[])
         auto response = result.get();
         cout << response->grasps.size() << endl ;
 
-            grasps_rviz_pub->publish(convertToVisualGraspMsg(response->grasps, 0.1,
-          0.1, 0.01, 0.01, "camera_optical_frame"));
+            grasps_rviz_pub->publish(convertToVisualGraspMsg(response->grasps, 0.05, 0.01, 0.01, "camera_optical_frame"));
 
         RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "response ok");
     }

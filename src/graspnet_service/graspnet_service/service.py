@@ -67,12 +67,12 @@ class GraspNetService(Node):
         factor_depth = self.get_parameter('factor_depth').value 
         
         # load data
-        data_dir = "/workspaces/grasp_ws/src/graspnet_service/doc/example_data/"
+        #data_dir = "/workspaces/grasp_ws/src/graspnet_service/doc/example_data/"
         #color = np.array(Image.open(os.path.join(data_dir, 'color.png')), dtype=np.float32) / 255.0
         #depth = np.array(Image.open(os.path.join(data_dir, 'depth.png')))
         color = color.astype(np.float32)/255.0 ;
-        workspace_mask = np.array(Image.open(os.path.join(data_dir, 'workspace_mask.png')))
-        meta = scio.loadmat(os.path.join(data_dir, 'meta.mat'))
+        #workspace_mask = np.array(Image.open(os.path.join(data_dir, 'workspace_mask.png')))
+        #meta = scio.loadmat(os.path.join(data_dir, 'meta.mat'))
       
         k = camera_info.k.reshape(3, 3);
        
