@@ -3,14 +3,6 @@
 #include <grasp_planner_interfaces/srv/grasp_net.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
-#include <moveit/robot_model_loader/robot_model_loader.h>
-#include <moveit/robot_state/conversions.h>
-#include <moveit/planning_pipeline/planning_pipeline.h>
-#include <moveit/planning_interface/planning_interface.h>
-#include <moveit/planning_scene_monitor/planning_scene_monitor.h>
-#include <moveit/kinematic_constraints/utils.h>
-#include <moveit_msgs/msg/display_trajectory.hpp>
-#include <moveit_msgs/msg/planning_scene.hpp>
 
 
 #include <opencv2/opencv.hpp>
@@ -19,6 +11,8 @@
 #include <thread>
 
 #include <Eigen/Geometry>
+
+#include "moveit_ik.hpp"
 
 using namespace std ;
 using namespace Eigen ;
@@ -93,47 +87,7 @@ int main(int argc, char *argv[])
     cv::Mat depth = cv::imread(argv[2], -1);
 
     std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared("graspnet_client_node");
-
-   robot_model_loader::RobotModelLoader robot_model_loader(node);
-   moveit::core::RobotModelPtr kinematic_model = robot_model_loader.getModel();
-   RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Model frame: %s", kinematic_model->getModelFrame().c_str());
-
-    moveit::core::RobotStatePtr kinematic_state(new moveit::core::RobotState(kinematic_model));
-    kinematic_state->setToDefaultValues();
-    const moveit::core::JointModelGroup* joint_model_group = kinematic_model->getJointModelGroup("l_iiwa_arm");
-
-    const std::vector<std::string> &joint_names = joint_model_group->getJointModelNames();
-
-    std::vector<double> joint_values;
-    kinematic_state->copyJointGroupPositions(joint_model_group, joint_values);
-    for(std::size_t i = 0; i < joint_names.size(); ++i)
-    {
-      RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Joint %s: %f", joint_names[i].c_str(), joint_values[i]);
-    }
-
-    kinematic_state->setToRandomPositions(joint_model_group);
-    const Eigen::Isometry3d &end_effector_state = kinematic_state->getGlobalLinkTransform("l_tool0");
-
-  /* Print end-effector pose. Remember that this is in the model frame */
-  RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), "Translation: " << end_effector_state.translation());
-RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), "Rotation: " << end_effector_state.rotation());
-
-bool found_ik = kinematic_state->setFromIK(joint_model_group, end_effector_state, 10);
-
-
-if (found_ik)
-{
-  kinematic_state->copyJointGroupPositions(joint_model_group, joint_values);
-  for(std::size_t i=0; i < joint_names.size(); ++i)
-  {
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Joint %s: %f", joint_names[i].c_str(), joint_values[i]);
-  }
-}
-else
-{
-  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Did not find IK solution");
-}
-
+  
     auto grasps_rviz_pub = node->create_publisher<visualization_msgs::msg::MarkerArray>(
      "/visual_grasps", 10);
 
