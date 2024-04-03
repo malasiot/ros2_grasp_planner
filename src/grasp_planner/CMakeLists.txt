@@ -18,8 +18,13 @@ find_package(visualization_msgs REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
 
 add_executable(grasp_planner_service
-    src/grasp_planner.cpp src/viz.cpp
-    )
+    src/grasp_planner.cpp 
+    src/viz.cpp 
+    src/moveit_ik.cpp 
+    src/moveit_ik.hpp
+    src/move_group_interface.cpp
+    src/move_group_interface.hpp
+)
 
 target_include_directories(grasp_planner_service PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

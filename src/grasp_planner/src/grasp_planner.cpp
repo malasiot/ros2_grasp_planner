@@ -3,22 +3,17 @@
 #include <grasp_planner_interfaces/srv/grasp_net.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
-#include <moveit/robot_model_loader/robot_model_loader.h>
-#include <moveit/robot_state/conversions.h>
-#include <moveit/planning_pipeline/planning_pipeline.h>
-#include <moveit/planning_interface/planning_interface.h>
-#include <moveit/planning_scene_monitor/planning_scene_monitor.h>
-#include <moveit/kinematic_constraints/utils.h>
-#include <moveit_msgs/msg/display_trajectory.hpp>
-#include <moveit_msgs/msg/planning_scene.hpp>
-
-
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_eigen/tf2_eigen.hpp>
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <chrono>
 #include <thread>
 
 #include <Eigen/Geometry>
+
+#include "move_group_interface.hpp"
 
 using namespace std ;
 using namespace Eigen ;
@@ -89,51 +84,22 @@ int main(int argc, char *argv[])
 
  cout << argv[1] << ' ' << argv[2] << endl ;
 
+    rclcpp::NodeOptions options ;
+    options.automatically_declare_parameters_from_overrides(true) ;
+    std::shared_ptr<MoveGroupInterfaceNode> mgi(new MoveGroupInterfaceNode(options)) ;
+    mgi->setup() ;
+
+    std::thread t = std::thread([&]() {
+        rclcpp::spin(mgi) ;
+        rclcpp::shutdown() ;
+
+    }) ;
+
     cv::Mat rgb = cv::imread(argv[1]);
     cv::Mat depth = cv::imread(argv[2], -1);
 
     std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared("graspnet_client_node");
-
-   robot_model_loader::RobotModelLoader robot_model_loader(node);
-   moveit::core::RobotModelPtr kinematic_model = robot_model_loader.getModel();
-   RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Model frame: %s", kinematic_model->getModelFrame().c_str());
-
-    moveit::core::RobotStatePtr kinematic_state(new moveit::core::RobotState(kinematic_model));
-    kinematic_state->setToDefaultValues();
-    const moveit::core::JointModelGroup* joint_model_group = kinematic_model->getJointModelGroup("l_iiwa_arm");
-
-    const std::vector<std::string> &joint_names = joint_model_group->getJointModelNames();
-
-    std::vector<double> joint_values;
-    kinematic_state->copyJointGroupPositions(joint_model_group, joint_values);
-    for(std::size_t i = 0; i < joint_names.size(); ++i)
-    {
-      RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Joint %s: %f", joint_names[i].c_str(), joint_values[i]);
-    }
-
-    kinematic_state->setToRandomPositions(joint_model_group);
-    const Eigen::Isometry3d &end_effector_state = kinematic_state->getGlobalLinkTransform("l_tool0");
-
-  /* Print end-effector pose. Remember that this is in the model frame */
-  RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), "Translation: " << end_effector_state.translation());
-RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), "Rotation: " << end_effector_state.rotation());
-
-bool found_ik = kinematic_state->setFromIK(joint_model_group, end_effector_state, 10);
-
-
-if (found_ik)
-{
-  kinematic_state->copyJointGroupPositions(joint_model_group, joint_values);
-  for(std::size_t i=0; i < joint_names.size(); ++i)
-  {
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Joint %s: %f", joint_names[i].c_str(), joint_values[i]);
-  }
-}
-else
-{
-  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Did not find IK solution");
-}
-
+  
     auto grasps_rviz_pub = node->create_publisher<visualization_msgs::msg::MarkerArray>(
      "/visual_grasps", 10);
 
@@ -173,6 +139,14 @@ else
     auto result = client->async_send_request(request);
 
    
+    auto tf_buffer = std::make_unique<tf2_ros::Buffer>(node->get_clock());
+    auto tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
+
+    geometry_msgs::msg::TransformStamped tr  = tf_buffer->lookupTransform(
+                     "world", "camera_optical_frame", tf2::TimePointZero, tf2::durationFromSec(5));
+
+    auto camera_tr = tf2::transformToEigen(tr);
+ 
     // Wait for the result.
     if (rclcpp::spin_until_future_complete(node, result) ==
         rclcpp::FutureReturnCode::SUCCESS)
@@ -180,7 +154,36 @@ else
         auto response = result.get();
         cout << response->grasps.size() << endl ;
 
-            grasps_rviz_pub->publish(convertToVisualGraspMsg(response->grasps, 0.05, 0.01, 0.01, "camera_optical_frame"));
+        for( auto &g: response->grasps ) {
+            auto &trv = g.translation ;
+            auto &rotv = g.rotation ;
+
+            Eigen::Vector3d c(trv[0], trv[1], trv[2]) ;
+            Eigen::Matrix3d rot ;
+            rot << rotv[0], rotv[1], rotv[2], 
+            rotv[3], rotv[4], rotv[5],
+            rotv[6], rotv[7], rotv[8] ;
+
+            Isometry3d p ;
+            p.setIdentity() ;
+            p.linear() = rot ;
+            p.translation() = c ;
+
+            p = camera_tr * p ;
+
+            c = p.translation() ;
+            rot = p.linear() ;
+
+            trv[0] = c.x() ; trv[1] = c.y() ; trv[2] = c.z() ;
+            rotv[0] = rot(0, 0) ; rotv[1] = rot(0, 1) ; rotv[2] = rot(0, 2) ;
+            rotv[3] = rot(1, 0) ; rotv[4] = rot(1, 1) ; rotv[5] = rot(1, 2) ;
+            rotv[6] = rot(2, 0) ; rotv[7] = rot(2, 1) ; rotv[8] = rot(2, 2) ;
+        }
+
+            grasps_rviz_pub->publish(convertToVisualGraspMsg(response->grasps, 0.05, 0.01, 0.01, "world"));
+
+            vector<grasp_planner_interfaces::msg::Grasp> grasps_filtered ;
+            mgi->filterGrasps(response->grasps, grasps_filtered) ;
 
         RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "response ok");
     }
