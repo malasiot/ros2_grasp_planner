@@ -107,7 +107,7 @@ visualization_msgs::msg::MarkerArray convertToVisualGraspMsg(
       static const double base_depth = 0.02 ;
    
       auto approach = rot.col(0) ; 
-      auto binormal = -rot.col(1) ;
+      auto binormal = rot.col(1) ;
       double hw = 0.5 * hands[i].width;
       double hand_depth = hands[i].depth ;
 
