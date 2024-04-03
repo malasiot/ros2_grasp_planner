@@ -20,23 +20,29 @@ bool MoveGroupInterfaceNode::setup() {
     solver_right_arm_.reset(new MoveItIKSolver(model_, scene_, "r_iiwa_arm")) ;
 }
 
+static Eigen::Isometry3d poseFromEigen(const Vector3d &c, const Quaterniond &r) {
+    Isometry3d t ;
+    t.setIdentity() ;
+    t.linear() = r.toRotationMatrix() ;
+    t.translation() = c ;
+    return t ;
+}
 void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interfaces::msg::Grasp> &candidates, std::vector<grasp_planner_interfaces::msg::Grasp> &filtered) {
     const double finger_width = 0.01 ;
 
+uint count = 0 ;
     for( const auto &grasp: candidates ) {
          const auto &trv = grasp.translation ;
       const auto &rotv = grasp.rotation ;
-
-      Eigen::Vector3d c(trv[0], trv[1], trv[2]) ;
-      Eigen::Matrix3d rot ;
-      rot << rotv[0], rotv[1], rotv[2], 
-            rotv[3], rotv[4], rotv[5],
-            rotv[6], rotv[7], rotv[8] ;
+        count ++ ;
+      Eigen::Vector3d c(trv.x, trv.y, trv.z) ;
+      Eigen::Quaterniond rot(rotv.w, rotv.x, rotv.y, rotv.z) ;
+      Eigen::Matrix3d m = rot.toRotationMatrix();
 
       static const double base_depth = 0.02 ;
    
-      auto approach = rot.col(0) ; 
-      auto binormal = -rot.col(1) ;
+      auto approach = m.col(0) ; 
+      auto binormal = m.col(1) ;
       double hw = 0.5 * grasp.width;
       double hand_depth = grasp.depth ;
 
@@ -45,6 +51,13 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
       Vector3d left_center = c - (hw + finger_width/2) * binormal + approach * ( hand_depth - base_depth )/2.0 ;
       Vector3d right_center = c + (hw + finger_width/2) * binormal + approach * ( hand_depth - base_depth )/2.0 ;
       
+      if ( !solver_left_arm_->solveIK(poseFromEigen(left_center, rot)).empty() && 
+           !solver_right_arm_->solveIK(poseFromEigen(right_center, rot)).empty() )  {
+        cout<< count << ": found valid grasp " << c << endl ;
+        filtered.push_back(grasp) ;
+      } else {
+        cout << count << ": no IK solution" << endl ;    
+      }
 
     }
 }

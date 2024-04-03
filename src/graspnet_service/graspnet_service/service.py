@@ -42,6 +42,37 @@ from graspnet import GraspNet, pred_decode
 from collision_detector import ModelFreeCollisionDetector
 from data_utils import CameraInfo, create_point_cloud_from_depth_image
 
+def rotationMatrixToQuaternion3(m):
+    #q0 = qw
+    t = np.matrix.trace(m)
+    q = np.asarray([0.0, 0.0, 0.0, 0.0], dtype=np.float64)
+
+    if(t > 0):
+        t = np.sqrt(t + 1)
+        q[3] = 0.5 * t
+        t = 0.5/t
+        q[0] = (m[2,1] - m[1,2]) * t
+        q[1] = (m[0,2] - m[2,0]) * t
+        q[2] = (m[1,0] - m[0,1]) * t
+
+    else:
+        i = 0
+        if (m[1,1] > m[0,0]):
+            i = 1
+        if (m[2,2] > m[i,i]):
+            i = 2
+        j = (i+1)%3
+        k = (j+1)%3
+
+        t = np.sqrt(m[i,i] - m[j,j] - m[k,k] + 1)
+        q[i] = 0.5 * t
+        t = 0.5 / t
+        q[3] = (m[k,j] - m[j,k]) * t
+        q[j] = (m[j,i] + m[i,j]) * t
+        q[k] = (m[k,i] + m[i,k]) * t
+
+    return q
+
 class GraspNetService(Node):
     def get_net(self):
         # Init the model
@@ -169,9 +200,18 @@ class GraspNetService(Node):
                 msg.width = float(grasp[1] * scale_factor) ;
                 msg.height = float(grasp[2] * scale_factor) ;
                 msg.depth = float(grasp[3] * scale_factor) ;
-                msg.rotation = grasp[4:13].tolist()
-                msg.translation = grasp[13:16].tolist()
-                msg.translation *= scale_factor 
+            
+                r = np.reshape(grasp[4:13].tolist(), (3, 3));
+                rot = rotationMatrixToQuaternion3(r) ;
+                msg.rotation.x = rot[0] ; 
+                msg.rotation.y = rot[1] ; 
+                msg.rotation.z = rot[2] ; 
+                msg.rotation.w = rot[3] ; 
+                t = grasp[13:16].tolist() ;
+                msg.translation.x = t[0] * scale_factor ;
+                msg.translation.y = t[1] * scale_factor ;
+                msg.translation.z = t[2] * scale_factor ;
+                
                 grippers.append(Grasp(grasp).to_open3d_geometry()) ;
                 response.grasps.append(msg)
        # grippers = ggg.to_open3d_geometry_list()

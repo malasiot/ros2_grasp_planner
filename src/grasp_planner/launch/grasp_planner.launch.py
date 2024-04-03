@@ -237,7 +237,7 @@ def generate_launch_description():
             robot_description_kinematics,
         ],
         arguments=[package_share_directory + '/data/cap_00000_c.png', 
-                   package_share_directory + '/data/cap_00000_c.png']
+                   package_share_directory + '/data/cap_00000_d.png']
     )
     
     nodes = [

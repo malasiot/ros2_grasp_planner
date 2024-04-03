@@ -41,9 +41,11 @@ std::vector<std::vector<double>> MoveItIKSolver::solveIK(const Eigen::Isometry3d
 std::vector<std::vector<double>> MoveItIKSolver::solveIK(const Eigen::Isometry3d &target) const {
     moveit::core::RobotState state(model_);
 
+    std::vector<double> values ;
+    state.copyJointGroupPositions(jmg_, values) ;
     const std::vector<std::string> &joint_names = jmg_->getActiveJointModelNames();
 
-    if ( state.setFromIK(jmg_, target, 0.0,
+    if ( state.setFromIK(jmg_, target, 0.1,
                         std::bind(&MoveItIKSolver::isIKSolutionValid, this, std::placeholders::_1, std::placeholders::_2,
                                   std::placeholders::_3))) {
         std::vector<double> solution;

@@ -21,7 +21,7 @@ using namespace Eigen ;
 extern visualization_msgs::msg::MarkerArray convertToVisualGraspMsg(
   const std::vector<grasp_planner_interfaces::msg::Grasp> & hands,
   double hand_length, double finger_width, double finger_height,
-  const std::string & frame_id) ;
+  const std::string & frame_id, const Vector4f &clr) ;
 
 sensor_msgs::msg::CameraInfo getCameraInfo(uint32_t width, uint32_t height, float f)
 {
@@ -74,7 +74,27 @@ sensor_msgs::msg::CameraInfo getCameraInfo(uint32_t width, uint32_t height, floa
 using namespace std::literals::chrono_literals;
 using GraspNet = grasp_planner_interfaces::srv::GraspNet;
 
-void validateGrasps(const std::vector<grasp_planner_interfaces::msg::Grasp> &grasps) {
+void convertToWorldCoordinates(const Isometry3d &camera_tr, std::vector<grasp_planner_interfaces::msg::Grasp> &grasps) {
+      for( auto &g: grasps ) {
+            auto &trv = g.translation ;
+            auto &rotv = g.rotation ;
+
+            Eigen::Vector3d c(trv.x, trv.y, trv.z) ;
+            Eigen::Quaterniond rot(rotv.w, rotv.x, rotv.y, rotv.z) ;
+          
+            Isometry3d p ;
+            p.setIdentity() ;
+            p.linear() = rot.toRotationMatrix() ;
+            p.translation() = c ;
+
+            p = camera_tr * p ;
+
+            c = p.translation() ;
+            rot = p.linear() ;
+
+            trv.x = c.x() ; trv.y = c.y() ; trv.z = c.z() ;
+            rotv.x = rot.x() ; rotv.y = rot.y() ; rotv.z = rot.z() ;  rotv.w = rot.w() ;
+        }
 }
   
 
@@ -152,38 +172,21 @@ int main(int argc, char *argv[])
         rclcpp::FutureReturnCode::SUCCESS)
     {
         auto response = result.get();
-        cout << response->grasps.size() << endl ;
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Received %d candidate grasps", response->grasps.size()) ;
 
-        for( auto &g: response->grasps ) {
-            auto &trv = g.translation ;
-            auto &rotv = g.rotation ;
+        // transform to world coordinate frame
+        convertToWorldCoordinates(camera_tr, response->grasps) ;
 
-            Eigen::Vector3d c(trv[0], trv[1], trv[2]) ;
-            Eigen::Matrix3d rot ;
-            rot << rotv[0], rotv[1], rotv[2], 
-            rotv[3], rotv[4], rotv[5],
-            rotv[6], rotv[7], rotv[8] ;
+        // publish markers
+        grasps_rviz_pub->publish(convertToVisualGraspMsg(response->grasps, 0.05, 0.01, 0.01, "world", {0, 0, 1.0f, 0.5f}));
 
-            Isometry3d p ;
-            p.setIdentity() ;
-            p.linear() = rot ;
-            p.translation() = c ;
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Filtering non-reachable candidates") ;
+        vector<grasp_planner_interfaces::msg::Grasp> grasps_filtered ;
+        mgi->filterGrasps(response->grasps, grasps_filtered) ;
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Found %d reachable grasps", grasps_filtered.size()) ;
 
-            p = camera_tr * p ;
+        grasps_rviz_pub->publish(convertToVisualGraspMsg(grasps_filtered, 0.05, 0.01, 0.01, "world", {1, 0, 0.0f, 0.5f}));
 
-            c = p.translation() ;
-            rot = p.linear() ;
-
-            trv[0] = c.x() ; trv[1] = c.y() ; trv[2] = c.z() ;
-            rotv[0] = rot(0, 0) ; rotv[1] = rot(0, 1) ; rotv[2] = rot(0, 2) ;
-            rotv[3] = rot(1, 0) ; rotv[4] = rot(1, 1) ; rotv[5] = rot(1, 2) ;
-            rotv[6] = rot(2, 0) ; rotv[7] = rot(2, 1) ; rotv[8] = rot(2, 2) ;
-        }
-
-            grasps_rviz_pub->publish(convertToVisualGraspMsg(response->grasps, 0.05, 0.01, 0.01, "world"));
-
-            vector<grasp_planner_interfaces::msg::Grasp> grasps_filtered ;
-            mgi->filterGrasps(response->grasps, grasps_filtered) ;
 
         RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "response ok");
     }
