@@ -16,6 +16,7 @@ find_package(OpenCV 4 REQUIRED core imgproc)
 find_package(cv_bridge REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
+find_package(image_transport REQUIRED)
 
 add_executable(grasp_planner_service
     src/grasp_planner.cpp 
@@ -24,6 +25,8 @@ add_executable(grasp_planner_service
     src/moveit_ik.hpp
     src/move_group_interface.cpp
     src/move_group_interface.hpp
+    src/grasp_planner_service.cpp
+    src/grasp_planner_service.hpp
 )
 
 target_include_directories(grasp_planner_service PUBLIC
@@ -37,6 +40,7 @@ ament_target_dependencies(grasp_planner_service
   rclcpp  std_msgs sensor_msgs geometry_msgs 
   cv_bridge Eigen3
   visualization_msgs
+  image_transport
   moveit_ros_planning_interface
   grasp_planner_interfaces
 )

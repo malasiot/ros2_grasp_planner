@@ -74,7 +74,7 @@ sensor_msgs::msg::CameraInfo getCameraInfo(uint32_t width, uint32_t height, floa
 using namespace std::literals::chrono_literals;
 using GraspNet = grasp_planner_interfaces::srv::GraspNet;
 
-void convertToWorldCoordinates(const Isometry3d &camera_tr, std::vector<grasp_planner_interfaces::msg::Grasp> &grasps) {
+static void convertToWorldCoordinates(const Isometry3d &camera_tr, std::vector<grasp_planner_interfaces::msg::Grasp> &grasps) {
       for( auto &g: grasps ) {
             auto &trv = g.translation ;
             auto &rotv = g.rotation ;
@@ -182,7 +182,8 @@ int main(int argc, char *argv[])
 
         RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Filtering non-reachable candidates") ;
         vector<grasp_planner_interfaces::msg::Grasp> grasps_filtered ;
-        mgi->filterGrasps(response->grasps, grasps_filtered) ;
+        vector<GraspCandidate> results ;
+        mgi->filterGrasps(response->grasps, grasps_filtered, results) ;
         RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Found %d reachable grasps", grasps_filtered.size()) ;
 
         grasps_rviz_pub->publish(convertToVisualGraspMsg(grasps_filtered, 0.05, 0.01, 0.01, "world", {1, 0, 0.0f, 0.5f}));

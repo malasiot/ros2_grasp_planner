@@ -16,7 +16,7 @@
     "request": "launch",
     "program": "${workspaceFolder}/build/grasp_planner/grasp_planner_service",
    
-    "args": ["data/cap_00000_c.png", "data/cap_00000_d.png"],
+    "args": ["data/cap_00000_c.png", "data/cap_00000_d.png", "--ros-args", "--params-file", "/workspaces/grasp_ws/install/share/iiwa_description/moveit2/dual_kinematics.yaml" ],
     "stopAtEntry": true,
     "cwd": "${workspaceFolder}/src/grasp_planner/",
     "environment": [

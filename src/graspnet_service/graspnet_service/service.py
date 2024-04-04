@@ -215,7 +215,7 @@ class GraspNetService(Node):
                 grippers.append(Grasp(grasp).to_open3d_geometry()) ;
                 response.grasps.append(msg)
        # grippers = ggg.to_open3d_geometry_list()
-        o3d.visualization.draw_geometries([cloud, *grippers])
+       # o3d.visualization.draw_geometries([cloud, *grippers])
         return response
 
 
