@@ -27,14 +27,15 @@ add_executable(grasp_planner_service
     src/move_group_interface.hpp
     src/grasp_planner_service.cpp
     src/grasp_planner_service.hpp
+    src/masked_point_cloud.cpp
+    src/masked_point_cloud.hpp
 )
 
 target_include_directories(grasp_planner_service PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
- 
   ${OpenCV_INCLUDE_DIRS})
-target_compile_features(grasp_planner_service PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(grasp_planner_service PUBLIC cxx_std_17)  # Require C++17
 
 ament_target_dependencies(grasp_planner_service
   rclcpp  std_msgs sensor_msgs geometry_msgs 
