@@ -17,7 +17,7 @@ GraspPlannerService::GraspPlannerService(const rclcpp::NodeOptions &options): rc
     service_ = create_service<GraspPlannerSrv>("grasp_planner_service", std::bind(&GraspPlannerService::plan, this, std::placeholders::_1, std::placeholders::_2));
 
     sync_.reset(new Synchronizer(SyncPolicy(10), rgb_sub_, depth_sub_));
-    sync_->registerCallback(std::bind(&GraspPlannerService::frameCallback, this, std::placeholders::_1, std::placeholders::_2));
+    sync_->registerCallback(std::bind(&GraspPlannerService::frameCallback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
     grasps_rviz_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("/visual_grasps", 10);
 
@@ -34,8 +34,7 @@ void GraspPlannerService::setup(const std::shared_ptr<MoveGroupInterfaceNode> &m
     move_group_interface_ = mgi ;
     rgb_sub_.subscribe(this, rgb_topic_);
     depth_sub_.subscribe(this, depth_topic_);
-    caminfo_sub_ = create_subscription<sensor_msgs::msg::CameraInfo>(camera_info_topic_, 10,
-                                                                     std::bind(&GraspPlannerService::cameraInfoCallback, this, std::placeholders::_1));
+    caminfo_sub_.subscribe(this, camera_info_topic_) ;
 
     image_transport_ = std::make_shared<image_transport::ImageTransport>(shared_from_this());
 
@@ -43,9 +42,14 @@ void GraspPlannerService::setup(const std::shared_ptr<MoveGroupInterfaceNode> &m
                                                                                           std::bind(&GraspPlannerService::maskCallback, this, std::placeholders::_1)));
 }
 
-void GraspPlannerService::frameCallback(const sensor_msgs::msg::Image::ConstSharedPtr colorMsg, const sensor_msgs::msg::Image::ConstSharedPtr depthMsg)
+void GraspPlannerService::frameCallback(sensor_msgs::msg::Image::ConstSharedPtr colorMsg, 
+    sensor_msgs::msg::Image::ConstSharedPtr depthMsg,
+    sensor_msgs::msg::CameraInfo::ConstSharedPtr camInfo)
 {
     std::lock_guard<std::mutex> frame_lock_(frame_mutex_);
+
+    camera_info_ = camInfo ;
+
     try
     {
         auto colorPtr = cv_bridge::toCvCopy(colorMsg, sensor_msgs::image_encodings::BGR8);
@@ -101,7 +105,7 @@ extern visualization_msgs::msg::MarkerArray convertToVisualGraspMsg(
   double hand_length, double finger_width, double finger_height,
   const std::string & frame_id, const Vector4f &clr) ;
 
-void convertToWorldCoordinates(const Isometry3d &camera_tr, std::vector<grasp_planner_interfaces::msg::Grasp> &grasps) {
+static void convertToWorldCoordinates(const Isometry3d &camera_tr, std::vector<grasp_planner_interfaces::msg::Grasp> &grasps) {
       for( auto &g: grasps ) {
             auto &trv = g.translation ;
             auto &rotv = g.rotation ;
@@ -133,25 +137,28 @@ void GraspPlannerService::plan(const std::shared_ptr<GraspPlannerSrv::Request> r
     }   
 
     cv::Mat rgb, depth ;
-    
+    {
+        std::lock_guard<std::mutex> frame_lock(frame_mutex_) ;
+        rgb = rgb_.clone() ;
+        depth = depth_.clone() ;
+    }
+
     auto graspnet_request = std::make_shared<GraspNet::Request>();
 
     std_msgs::msg::Header header; // empty header
     header.stamp = get_clock()->now();
     header.frame_id = "camera";
 
-    auto rgb_bridge = std::make_shared<cv_bridge::CvImage>(header, sensor_msgs::image_encodings::BGR8, rgb_.clone());
+    auto rgb_bridge = std::make_shared<cv_bridge::CvImage>(header, sensor_msgs::image_encodings::BGR8, rgb);
     rgb_bridge->toImageMsg(graspnet_request->rgb);
 
     // Convert OpenCV Mat to ROS Image
 
-    auto width = rgb_.cols;
-    auto height = rgb_.rows;
+    auto width = rgb.cols;
+    auto height = rgb.rows;
 
-    auto depth_bridge = std::make_shared<cv_bridge::CvImage>(header, sensor_msgs::image_encodings::MONO16, depth_.clone());
+    auto depth_bridge = std::make_shared<cv_bridge::CvImage>(header, sensor_msgs::image_encodings::MONO16, depth.clone());
     depth_bridge->toImageMsg(graspnet_request->depth);
-
-    float f = 690.0f;
 
     graspnet_request->camera_info = *camera_info_ ;
 

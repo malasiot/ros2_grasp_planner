@@ -30,7 +30,7 @@ private:
 
  void maskCallback(const sensor_msgs::msg::Image::ConstSharedPtr &msg);
  void cameraInfoCallback(const sensor_msgs::msg::CameraInfo::SharedPtr msg);
- void frameCallback(const sensor_msgs::msg::Image::ConstSharedPtr colorMsg, const sensor_msgs::msg::Image::ConstSharedPtr depthMsg) ;
+ void frameCallback(sensor_msgs::msg::Image::ConstSharedPtr colorMsg, sensor_msgs::msg::Image::ConstSharedPtr depthMsg, sensor_msgs::msg::CameraInfo::ConstSharedPtr camInfo) ;
 
 private:
    
@@ -38,10 +38,11 @@ private:
     using GraspNet = grasp_planner_interfaces::srv::GraspNet;
 
     rclcpp::Service<GraspPlannerSrv>::SharedPtr service_ ;
-     rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr caminfo_sub_;
+    
+     message_filters::Subscriber<sensor_msgs::msg::CameraInfo> caminfo_sub_ ;
      message_filters::Subscriber<sensor_msgs::msg::Image> rgb_sub_, depth_sub_ ;
      
-     using SyncPolicy =  typename message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image> ;
+     using SyncPolicy =  typename message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::CameraInfo> ;
      using Synchronizer = message_filters::Synchronizer<SyncPolicy> ;
      std::unique_ptr<Synchronizer> sync_ ;
      std::shared_ptr<image_transport::ImageTransport> image_transport_;
@@ -52,7 +53,7 @@ private:
     void plan(const std::shared_ptr<GraspPlannerSrv::Request> request, std::shared_ptr<GraspPlannerSrv::Response> response) ;
    
     cv::Mat rgb_, depth_, mask_ ;
-    sensor_msgs::msg::CameraInfo::SharedPtr camera_info_ = nullptr ;
+    sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info_ = nullptr ;
 
     std::string camera_info_topic_, rgb_topic_, depth_topic_, mask_topic_ ;
     std::mutex frame_mutex_, mask_mutex_ ;
