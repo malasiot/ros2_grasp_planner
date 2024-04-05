@@ -48,6 +48,7 @@ private:
      std::shared_ptr<image_transport::ImageTransport> image_transport_;
      std::shared_ptr<image_transport::Subscriber> mask_sub_;
      std::shared_ptr<rclcpp::Client<GraspNet>> graspnet_client_ ;
+    rclcpp::CallbackGroup::SharedPtr graspnet_client_group_, service_group_ ;
     std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>> grasps_rviz_pub_ ;
 
     void plan(const std::shared_ptr<GraspPlannerSrv::Request> request, std::shared_ptr<GraspPlannerSrv::Response> response) ;
@@ -57,7 +58,7 @@ private:
 
     std::string camera_info_topic_, rgb_topic_, depth_topic_, mask_topic_ ;
     std::mutex frame_mutex_, mask_mutex_ ;
-    std::atomic<bool> frame_ready_ {false} ;
+    std::atomic<bool> frame_ready_ {false}, mask_ready_{false} ;
     std::shared_ptr<MoveGroupInterfaceNode> move_group_interface_ ;
   
 };

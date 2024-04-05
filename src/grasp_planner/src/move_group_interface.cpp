@@ -66,6 +66,7 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
 
         if (!ls.empty() && !rs.empty())
         {
+            filtered.emplace_back(grasp) ;
             result.emplace_back(left_center, right_center, rot);
         }
     }

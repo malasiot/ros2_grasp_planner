@@ -37,6 +37,13 @@ def generate_launch_description():
             description='Start RViz.',
         )
     )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'start_virtual_camera',
+            default_value='true',
+            description='Start virtual camera',
+        )
+    )
   
     declared_arguments.append(
         DeclareLaunchArgument(
@@ -55,6 +62,7 @@ def generate_launch_description():
     description_file = LaunchConfiguration('description_file')
     start_rviz = LaunchConfiguration('start_rviz')
     namespace = LaunchConfiguration('namespace')
+    start_virtual_camera = LaunchConfiguration('start_virtual_camera')
    
     # Get URDF via xacro
     robot_description_content = Command(
@@ -75,7 +83,7 @@ def generate_launch_description():
     robot_description_kinematics = PathJoinSubstitution(
         [FindPackageShare(description_package), "moveit2", "dual_kinematics.yaml"]
     )
-
+   
     robot_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             FindPackageShare('iiwa_bringup'),
@@ -91,14 +99,18 @@ def generate_launch_description():
         }.items()
     )
 
+    scene_urdf = get_package_share_directory("iiwa_description") + "/urdf/mesh.urdf"
+    
     virtual_camera_node = Node(
         package="ros2_virtual_camera",
         executable="virtual_camera",
         namespace=namespace,
         output="screen",
         parameters=[
-            robot_description
-        ]
+            robot_description,
+            { "mesh" : scene_urdf}
+        ],
+        condition=IfCondition(start_virtual_camera)
     )
 
     robot_mask_node = Node(
