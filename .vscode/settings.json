@@ -89,5 +89,6 @@
         "regex": "cpp"
     },
     "remote.autoForwardPortsFallback": 0,
-    "ros.distro": "humble"
+    "ros.distro": "humble",
+    "git.ignoreLimitWarning": true
 }

@@ -18,12 +18,13 @@
 #include "cv_bridge/cv_bridge.h"
 
 class MoveGroupInterfaceNode ;
+class MaskedPointCloud ;
 
 class GraspPlannerService:  public rclcpp::Node {
 public:
-    GraspPlannerService(const rclcpp::NodeOptions & options = rclcpp::NodeOptions().automatically_declare_parameters_from_overrides(true));
+    GraspPlannerService(const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
 
-    void setup(const std::shared_ptr<MoveGroupInterfaceNode> &mgi);
+    void setup(const std::shared_ptr<MoveGroupInterfaceNode> &mgi, const std::shared_ptr<MaskedPointCloud> &pcl);
 
  
 private:
@@ -39,26 +40,13 @@ private:
 
     rclcpp::Service<GraspPlannerSrv>::SharedPtr service_ ;
     
-     message_filters::Subscriber<sensor_msgs::msg::CameraInfo> caminfo_sub_ ;
-     message_filters::Subscriber<sensor_msgs::msg::Image> rgb_sub_, depth_sub_ ;
-     
-     using SyncPolicy =  typename message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::CameraInfo> ;
-     using Synchronizer = message_filters::Synchronizer<SyncPolicy> ;
-     std::unique_ptr<Synchronizer> sync_ ;
-     std::shared_ptr<image_transport::ImageTransport> image_transport_;
-     std::shared_ptr<image_transport::Subscriber> mask_sub_;
-     std::shared_ptr<rclcpp::Client<GraspNet>> graspnet_client_ ;
+    std::shared_ptr<rclcpp::Client<GraspNet>> graspnet_client_ ;
     rclcpp::CallbackGroup::SharedPtr graspnet_client_group_, service_group_ ;
     std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>> grasps_rviz_pub_ ;
 
     void plan(const std::shared_ptr<GraspPlannerSrv::Request> request, std::shared_ptr<GraspPlannerSrv::Response> response) ;
    
-    cv::Mat rgb_, depth_, mask_ ;
-    sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info_ = nullptr ;
-
-    std::string camera_info_topic_, rgb_topic_, depth_topic_, mask_topic_ ;
-    std::mutex frame_mutex_, mask_mutex_ ;
-    std::atomic<bool> frame_ready_ {false}, mask_ready_{false} ;
     std::shared_ptr<MoveGroupInterfaceNode> move_group_interface_ ;
+    std::shared_ptr<MaskedPointCloud> masked_point_cloud_ ;
   
 };

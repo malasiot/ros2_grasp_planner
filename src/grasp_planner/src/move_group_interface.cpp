@@ -19,6 +19,24 @@ bool MoveGroupInterfaceNode::setup()
     scene_.reset(new planning_scene::PlanningScene(model_));
     solver_left_arm_.reset(new MoveItIKSolver(model_, scene_, "l_iiwa_arm"));
     solver_right_arm_.reset(new MoveItIKSolver(model_, scene_, "r_iiwa_arm"));
+
+    octomap_sub_ =  create_subscription<octomap_msgs::msg::Octomap>(
+      "octomap_binary", 10, std::bind(&MoveGroupInterfaceNode::octomapCallback, this, std::placeholders::_1));
+
+      octomap_pub_ = create_publisher<moveit_msgs::msg::PlanningScene>("planning_scene", 1) ;
+}
+
+void MoveGroupInterfaceNode::octomapCallback(const octomap_msgs::msg::Octomap::SharedPtr octomap) const {
+    
+    moveit_msgs::msg::PlanningScene planning_scene ;
+    scene_->getPlanningSceneMsg(planning_scene) ;
+    planning_scene.world.octomap.octomap = *octomap ;
+    auto acm = planning_scene.allowed_collision_matrix ;
+    
+   
+     // RCLCPP_INFO(this->get_logger(), "I heard: '%s'", msg->data.c_str())
+     octomap_pub_->publish(planning_scene);
+      
 }
 
 static Eigen::Isometry3d poseFromEigen(const Vector3d &c, const Quaterniond &r)

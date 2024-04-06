@@ -129,6 +129,26 @@ def generate_launch_description():
         namespace=namespace,
         output="screen"
     )
+
+    octomap_node = Node(
+        package="octomap_server",
+        executable="octomap_server_node",
+        namespace=namespace,
+        output="screen",
+        parameters=[
+            {
+               
+                "frame_id": "world",
+                "base_frame_id": "base",
+                "resolution": 0.02,
+              
+
+            }],
+            remappings=[
+            ('/cloud_in', '/masked/points')
+        ]
+        
+    )
     
     package_share_directory = get_package_share_directory('grasp_planner')
     
@@ -140,17 +160,16 @@ def generate_launch_description():
         parameters=[
             robot_description,
             robot_description_kinematics,
-        ],
-        arguments=[package_share_directory + '/data/cap_00000_c.png', 
-                   package_share_directory + '/data/cap_00000_d.png']
+        ]
     )
     
     nodes = [
         robot_launch,
         virtual_camera_node,
         robot_mask_node,
+        octomap_node,
         graspnet_service_node,
-    #    grasp_planning_node
+#        grasp_planning_node
     ]
 
     return LaunchDescription(declared_arguments + nodes)
