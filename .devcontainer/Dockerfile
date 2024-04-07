@@ -1,7 +1,7 @@
 FROM malasiot/ros2-humble-cuda-11.8:latest
 WORKDIR /app
 
-RUN apt-get update ; apt-get -y install python3-pip ros-humble-moveit ros-humble-moveit-servo ros-humble-controller-manager ros-humble-gazebo-dev ros-humble-gazebo-ros ros-humble-octomap-mapping
+RUN apt-get update ; apt-get -y install python3-pip ros-humble-moveit ros-humble-moveit-servo ros-humble-moveit-ros-perception ros-humble-controller-manager ros-humble-gazebo-dev ros-humble-gazebo-ros ros-humble-octomap-mapping
 
 ARG TORCH_CUDA_ARCH_ARGS='6.0 6.1 6.2 8.0 8.6'
 ENV TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_ARGS}

@@ -167,9 +167,9 @@ def generate_launch_description():
         robot_launch,
         virtual_camera_node,
         robot_mask_node,
-        octomap_node,
+#        octomap_node,
         graspnet_service_node,
-#        grasp_planning_node
+        grasp_planning_node
     ]
 
     return LaunchDescription(declared_arguments + nodes)
