@@ -15,11 +15,7 @@ bool MoveGroupInterfaceNode::setup() {
     planning_scene_monitor_ = std::make_shared<planning_scene_monitor::PlanningSceneMonitor>(shared_from_this(), "robot_description");
 
     planning_scene_monitor_->startWorldGeometryMonitor() ;
-    robot_model_loader::RobotModelLoader robot_model_loader(shared_from_this());
-    model_ = robot_model_loader.getModel();
-    scene_.reset(new planning_scene::PlanningScene(model_));
-    solver_left_arm_.reset(new MoveItIKSolver(planning_scene_monitor_, "l_iiwa_arm", "l_ee"));
-    solver_right_arm_.reset(new MoveItIKSolver(planning_scene_monitor_, "r_iiwa_arm", "r_ee"));
+  
 }
 
 static Eigen::Isometry3d poseFromEigen(const Vector3d &c, const Quaterniond &r)
@@ -34,7 +30,12 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
                                           std::vector<grasp_planner_interfaces::msg::Grasp> &filtered,
                                           std::vector<GraspCandidate> &result)
 {
-    const double finger_width = 0.01;
+    const double finger_width = 0.0;
+
+    planning_scene_monitor::LockedPlanningSceneRO planning_scene(planning_scene_monitor_) ;
+
+    MoveItIKSolver solver_left_arm(planning_scene, "l_iiwa_arm", "l_ee");
+    MoveItIKSolver solver_right_arm(planning_scene, "r_iiwa_arm", "r_ee");
 
     uint count = 0;
     for (const auto &grasp : candidates)
@@ -62,8 +63,8 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
         rot.y() = -rot.y();
         rot.z() = -rot.z();
 
-        auto ls = solver_left_arm_->solveIK(poseFromEigen(left_center, rot));
-        auto rs = solver_right_arm_->solveIK(poseFromEigen(right_center, rot));
+        auto ls = solver_left_arm.solveIK(poseFromEigen(left_center, rot));
+        auto rs = solver_right_arm.solveIK(poseFromEigen(right_center, rot));
 
         if (!ls.empty() && !rs.empty())
         {

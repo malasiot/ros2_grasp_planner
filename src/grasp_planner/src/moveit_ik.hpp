@@ -20,7 +20,7 @@ namespace moveit
 namespace planning_scene
 {
     class PlanningScene;
-    typedef std::shared_ptr<PlanningScene> PlanningScenePtr;
+    typedef std::shared_ptr<const PlanningScene> PlanningSceneConstPtr;
 } // namespace planning_scene
 
 namespace planning_scene_monitor
@@ -32,8 +32,8 @@ namespace planning_scene_monitor
 class MoveItIKSolver
 {
 public:
-    MoveItIKSolver(const planning_scene_monitor::PlanningSceneMonitorPtr &model,  
-        const std::string &planning_group, const std::string &ee_link, double dist_threshold = 0.01);
+    MoveItIKSolver(const planning_scene::PlanningSceneConstPtr &scene,  
+        const std::string &planning_group, const std::string &ee_link, double dist_threshold = 0.0);
 
     std::vector<std::vector<double>> solveIK(const Eigen::Isometry3d &target,
                                              const std::map<std::string, double> &seed) const;
@@ -57,6 +57,6 @@ protected:
     const double distance_threshold_;
     std::string group_, ee_link_ ;
 
-    planning_scene_monitor::PlanningSceneMonitorPtr planning_scene_monitor_;
+    planning_scene::PlanningSceneConstPtr planning_scene_;
 };
 

@@ -5,17 +5,16 @@
 
 using namespace std::placeholders;
 
-MoveItIKSolver::MoveItIKSolver(const planning_scene_monitor::PlanningSceneMonitorPtr &monitor, 
+MoveItIKSolver::MoveItIKSolver(const planning_scene::PlanningSceneConstPtr &scene, 
     const std::string &planning_group,  const std::string &ee_link, double dist_threshold)
-    : planning_scene_monitor_(monitor), group_(planning_group), ee_link_(ee_link), distance_threshold_(dist_threshold)
+    : planning_scene_(scene), group_(planning_group), ee_link_(ee_link), distance_threshold_(dist_threshold)
 {
    
 }
 
 
 moveit::core::RobotState MoveItIKSolver::getRobotState() const {
-    planning_scene_monitor::LockedPlanningSceneRO ls(planning_scene_monitor_);
-    moveit::core::RobotState rs = ls->getCurrentState();
+    moveit::core::RobotState rs = planning_scene_->getCurrentState();
     rs.update();
     return rs;
 }
@@ -69,13 +68,9 @@ bool MoveItIKSolver::isIKSolutionValid(moveit::core::RobotState *state, const mo
     state->setJointGroupPositions(jmg, ik_solution);
     state->update();
 
-    planning_scene_monitor::LockedPlanningSceneRO scene(planning_scene_monitor_);
-        
-        scene->printKnownObjects() ;
-   // scene_->checkCollision(req, res) ;
-    const bool colliding = scene->isStateColliding(*state, jmg->getName(), true);
+    const bool colliding = planning_scene_->isStateColliding(*state, jmg->getName(), false);
     const bool too_close =
-        (scene->distanceToCollision(*state, scene->getAllowedCollisionMatrix()) < distance_threshold_);
+        (planning_scene_->distanceToCollision(*state, planning_scene_->getAllowedCollisionMatrix()) < distance_threshold_);
 
     return (!colliding && !too_close);
 }
