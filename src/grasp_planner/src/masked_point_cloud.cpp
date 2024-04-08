@@ -2,6 +2,11 @@
 
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <image_geometry/image_geometry/pinhole_camera_model.h>
+#include "tf2/exceptions.h"
+#include "tf2_eigen/tf2_eigen.hpp"
+#include <chrono>
+#include <Eigen/Geometry>
+
 
 MaskedPointCloud::MaskedPointCloud(const rclcpp::NodeOptions &options) : rclcpp::Node("masked_point_cloud", options)
 {
@@ -11,7 +16,13 @@ MaskedPointCloud::MaskedPointCloud(const rclcpp::NodeOptions &options) : rclcpp:
     mask_topic_ = declare_parameter("mask_topic", "/robot_mask/image_raw");
     pcl_topic_ = declare_parameter("pcl_topic", "/masked/points");
     target_frame_ = declare_parameter("target_frame", "camera_optical_frame");
+    depth_threshold_ = declare_parameter("depth_threshold", 10) ;
+
+    tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
 }
+using namespace std::literals::chrono_literals ;
 
 void MaskedPointCloud::setup() {
     rgb_sub_.subscribe(this, rgb_topic_, rmw_qos_profile_sensor_data);
@@ -26,9 +37,25 @@ void MaskedPointCloud::setup() {
     mask_sub_ = std::make_shared<image_transport::Subscriber>(image_transport_->subscribe(mask_topic_, 10,
                                                                                           std::bind(&MaskedPointCloud::maskCallback, this, std::placeholders::_1)));
     pcl_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>(pcl_topic_, 10) ;
+
+    geometry_msgs::msg::TransformStamped t;
+
+        try {
+          t = tf_buffer_->lookupTransform(
+            "world", target_frame_, 
+            tf2::TimePointZero, tf2::Duration(10s));
+            camera_transform_ = tf2::transformToEigen(t);
+            has_camera_transform_ = true ;
+        } catch (const tf2::TransformException & ex) {
+          RCLCPP_INFO(
+            this->get_logger(), "Could not transform %s to %s: %s",
+            target_frame_.c_str(), "world", ex.what());
+          return;
+        }
+
 }
 
-static void maskDepth(const cv::Mat &depth, const cv::Mat &mask, cv::Mat &dmasked) {
+static void maskDepth(const cv::Mat &depth, const cv::Mat &mask, cv::Mat &dmasked, uint depth_thresh) {
     assert(depth.cols == mask.cols && depth.rows == mask.rows) ;
 
     dmasked = depth.clone() ;
@@ -41,7 +68,7 @@ static void maskDepth(const cv::Mat &depth, const cv::Mat &mask, cv::Mat &dmaske
             ushort &masked = maskedx[i][j] ;
 
             if ( maskv == 0 || dv == 0 ) continue ;
-            if ( abs(dv - maskv) < 10 ) masked = 0 ;
+            if ( abs(dv - maskv) < depth_thresh ) masked = 0 ;
 
         }
 }
@@ -86,7 +113,7 @@ void MaskedPointCloud::frameCallback(sensor_msgs::msg::Image::ConstSharedPtr col
     }
 
     if ( mask_.data != nullptr ) {
-        maskDepth(depth_, mask_, depth_masked_) ;
+        maskDepth(depth_, mask_, depth_masked_, depth_threshold_) ;
         publishCloud(depth_masked_, *camera_info_);
         frame_ready_ = true ;
     }
@@ -95,6 +122,7 @@ void MaskedPointCloud::frameCallback(sensor_msgs::msg::Image::ConstSharedPtr col
 static void convert(
         const cv::Mat & depth,
         const image_geometry::PinholeCameraModel & model,
+        const Eigen::Isometry3d &tr, 
         sensor_msgs::msg::PointCloud2::SharedPtr & cloud_msg,
         double range_max = 0.0,
         bool use_quiet_nan = false
@@ -126,10 +154,22 @@ static void convert(
                 continue;
             }
 
+            float X = (u - center_x) * depth * constant_x; 
+            float Y = (v - center_y) * depth * constant_y;
+            float Z = depth * unit_scaling ;
+
+
+            Eigen::Vector3d tp = tr * Eigen::Vector3d(X, Y, Z) ;
+
+            if ( tp.z() < 0.05 ) {
+                 *iter_x = *iter_y = *iter_z = bad_point;
+                continue;
+            }
+
             // Fill in XYZ
-            *iter_x = (u - center_x) * depth * constant_x;
-            *iter_y = (v - center_y) * depth * constant_y;
-            *iter_z = depth * unit_scaling ;
+            *iter_x = tp.x() ;
+            *iter_y = tp.y() ;
+            *iter_z = tp.z() ;
 
         }
     }
@@ -143,7 +183,7 @@ void MaskedPointCloud::publishCloud(const cv::Mat &dim, const sensor_msgs::msg::
                 std::make_shared<sensor_msgs::msg::PointCloud2>();
         cloud_msg->header = std_msgs::msg::Header();
         cloud_msg->header.stamp = get_clock()->now();
-        cloud_msg->header.frame_id = target_frame_ ;
+        cloud_msg->header.frame_id = "world" ;
         cloud_msg->height = dim.rows;
         cloud_msg->width = dim.cols;
         cloud_msg->is_dense = false;
@@ -160,7 +200,7 @@ void MaskedPointCloud::publishCloud(const cv::Mat &dim, const sensor_msgs::msg::
         image_geometry::PinholeCameraModel model;
         model.fromCameraInfo(caminfo);
 
-        convert(dim, model, cloud_msg);
+        convert(dim, model, camera_transform_, cloud_msg);
 
         pcl_pub_->publish(*cloud_msg) ;
 

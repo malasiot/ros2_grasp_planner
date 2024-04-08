@@ -9,34 +9,17 @@ using namespace std;
 using namespace Eigen;
 
 MoveGroupInterfaceNode::MoveGroupInterfaceNode(const rclcpp::NodeOptions &options) : rclcpp::Node("move_group_interface", options){
+}
 
-                                                                                     };
+bool MoveGroupInterfaceNode::setup() {
+    planning_scene_monitor_ = std::make_shared<planning_scene_monitor::PlanningSceneMonitor>(shared_from_this(), "robot_description");
 
-bool MoveGroupInterfaceNode::setup()
-{
+    planning_scene_monitor_->startWorldGeometryMonitor() ;
     robot_model_loader::RobotModelLoader robot_model_loader(shared_from_this());
     model_ = robot_model_loader.getModel();
     scene_.reset(new planning_scene::PlanningScene(model_));
-    solver_left_arm_.reset(new MoveItIKSolver(model_, scene_, "l_iiwa_arm"));
-    solver_right_arm_.reset(new MoveItIKSolver(model_, scene_, "r_iiwa_arm"));
-
-    octomap_sub_ =  create_subscription<octomap_msgs::msg::Octomap>(
-      "octomap_binary", 10, std::bind(&MoveGroupInterfaceNode::octomapCallback, this, std::placeholders::_1));
-
-      octomap_pub_ = create_publisher<moveit_msgs::msg::PlanningScene>("planning_scene", 1) ;
-}
-
-void MoveGroupInterfaceNode::octomapCallback(const octomap_msgs::msg::Octomap::SharedPtr octomap) const {
-    
-    moveit_msgs::msg::PlanningScene planning_scene ;
-    scene_->getPlanningSceneMsg(planning_scene) ;
-    planning_scene.world.octomap.octomap = *octomap ;
-    auto acm = planning_scene.allowed_collision_matrix ;
-    
-   
-     // RCLCPP_INFO(this->get_logger(), "I heard: '%s'", msg->data.c_str())
-     octomap_pub_->publish(planning_scene);
-      
+    solver_left_arm_.reset(new MoveItIKSolver(planning_scene_monitor_, "l_iiwa_arm", "l_ee"));
+    solver_right_arm_.reset(new MoveItIKSolver(planning_scene_monitor_, "r_iiwa_arm", "r_ee"));
 }
 
 static Eigen::Isometry3d poseFromEigen(const Vector3d &c, const Quaterniond &r)

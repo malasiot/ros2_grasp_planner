@@ -7,9 +7,17 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+from launch_param_builder import ParameterBuilder
 import os 
 from ament_index_python.packages import get_package_share_directory
 # may raise PackageNotFoundError
+
+def _octomap_launch_params(params: ParameterBuilder):
+    params.yaml("moveit2/sensors_virtual_pointcloud.yaml")
+    params.parameter("octomap_frame", "world")
+    params.parameter("octomap_resolution", 0.02)
+    params.parameter("max_range", 5.0)
+    return params.to_dict()
 
 def generate_launch_description():
     # Declare arguments
@@ -152,6 +160,9 @@ def generate_launch_description():
     
     package_share_directory = get_package_share_directory('grasp_planner')
     
+    params_movegroup = ParameterBuilder('iiwa_description')
+   
+   
     grasp_planning_node = Node(
         package="grasp_planner",
         executable="grasp_planner_service",
@@ -160,7 +171,7 @@ def generate_launch_description():
         parameters=[
             robot_description,
             robot_description_kinematics,
-        ]
+        ] + [_octomap_launch_params(params_movegroup)],
     )
     
     nodes = [
