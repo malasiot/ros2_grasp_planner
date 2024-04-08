@@ -16,7 +16,8 @@
     "request": "launch",
     "program": "${workspaceFolder}/build/grasp_planner/grasp_planner_service",
    
-    "args": ["--ros-args", "--params-file", "${workspaceFolder}/install/share/iiwa_description/moveit2/dual_kinematics.yaml" ],
+    "args": ["--ros-args", "--params-file", "${workspaceFolder}/install/share/iiwa_description/moveit2/dual_kinematics.yaml",
+    "--params-file", "${workspaceFolder}/install/share/iiwa_description/moveit2/sensors_virtual_pointcloud.yaml" ],
     "stopAtEntry": true,
     "cwd": "${workspaceFolder}/src/grasp_planner/",
     "environment": [

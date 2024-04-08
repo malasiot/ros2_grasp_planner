@@ -18,8 +18,6 @@ find_package(visualization_msgs REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(image_geometry REQUIRED)
-find_package(octomap REQUIRED)
-find_package(octomap_ros REQUIRED)
 
 add_executable(grasp_planner_service
     src/grasp_planner.cpp 
@@ -46,8 +44,8 @@ ament_target_dependencies(grasp_planner_service
   visualization_msgs
   image_transport
   image_geometry
-  octomap
-  octomap_ros
+  tf2
+  tf2_ros tf2_eigen
   moveit_ros_planning_interface
   grasp_planner_interfaces
 )
