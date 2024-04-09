@@ -134,7 +134,7 @@ void GraspPlannerService::plan(const std::shared_ptr<GraspPlannerSrv::Request> r
         RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Filtering non-reachable candidates") ;
         vector<grasp_planner_interfaces::msg::Grasp> grasps_filtered ;
         vector<GraspCandidate> results ;
-        move_group_interface_->filterGrasps(resp->grasps, grasps_filtered, results) ;
+        move_group_interface_->filterGrasps(resp->grasps, 0.02, 0.01, grasps_filtered, results) ;
         RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Found %d reachable grasps", results.size()) ;
 
         grasps_rviz_pub_->publish(convertToVisualGraspMsg(grasps_filtered, 0.05, 0.01, 0.01, "world", {1, 0, 0.0f, 0.5f}, "filtered"));

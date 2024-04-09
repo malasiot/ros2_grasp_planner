@@ -19,7 +19,7 @@ moveit::core::RobotState MoveItIKSolver::getRobotState() const {
     return rs;
 }
 
-std::vector<std::vector<double>> MoveItIKSolver::solveIK(const Eigen::Isometry3d &target,
+std::vector<double> MoveItIKSolver::solveIK(const Eigen::Isometry3d &target,
                                                          const std::map<std::string, double> &seed) const {
   /*  moveit::core::RobotState state(model_);
 
@@ -42,7 +42,7 @@ std::vector<std::vector<double>> MoveItIKSolver::solveIK(const Eigen::Isometry3d
     return {};
 }
 
-std::vector<std::vector<double>> MoveItIKSolver::solveIK(const Eigen::Isometry3d &target) const {
+std::vector<double> MoveItIKSolver::solveIK(const Eigen::Isometry3d &target) const {
     moveit::core::RobotState state = getRobotState() ;
     auto jmg = state.getJointModelGroup(group_) ;
 
@@ -50,13 +50,13 @@ std::vector<std::vector<double>> MoveItIKSolver::solveIK(const Eigen::Isometry3d
     state.copyJointGroupPositions(jmg, values) ;
     const std::vector<std::string> &joint_names = jmg->getActiveJointModelNames();
 
-    if ( state.setFromIK(jmg, target, ee_link_, 0.1,
+    if ( state.setFromIK(jmg, target, ee_link_, 0.5,
                         std::bind(&MoveItIKSolver::isIKSolutionValid, this, std::placeholders::_1, std::placeholders::_2,
                                   std::placeholders::_3))) {
         std::vector<double> solution;
         state.copyJointGroupPositions(jmg, solution);
 
-        return {solution};
+        return solution;
     }
 
     return {};
@@ -68,11 +68,13 @@ bool MoveItIKSolver::isIKSolutionValid(moveit::core::RobotState *state, const mo
     state->setJointGroupPositions(jmg, ik_solution);
     state->update();
 
-    const bool colliding = planning_scene_->isStateColliding(*state, jmg->getName(), false);
-    const bool too_close =
-        (planning_scene_->distanceToCollision(*state, planning_scene_->getAllowedCollisionMatrix()) < distance_threshold_);
+    if ( !planning_scene_->isStateColliding(*state, jmg->getName(), false) ) {
+      //  if (planning_scene_->distanceToCollision(*state, planning_scene_->getAllowedCollisionMatrix()) < distance_threshold_) 
+      //    return true ;
+      return true ;
+    }
 
-    return (!colliding && !too_close);
+    return false ;
 }
 
 std::vector<std::string> MoveItIKSolver::getJointNames() const {

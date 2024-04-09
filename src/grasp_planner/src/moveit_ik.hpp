@@ -35,9 +35,9 @@ public:
     MoveItIKSolver(const planning_scene::PlanningSceneConstPtr &scene,  
         const std::string &planning_group, const std::string &ee_link, double dist_threshold = 0.0);
 
-    std::vector<std::vector<double>> solveIK(const Eigen::Isometry3d &target,
+    std::vector<double> solveIK(const Eigen::Isometry3d &target,
                                              const std::map<std::string, double> &seed) const;
-    std::vector<std::vector<double>> solveIK(const Eigen::Isometry3d &target) const;
+    std::vector<double> solveIK(const Eigen::Isometry3d &target) const;
 
     std::vector<std::string> getJointNames() const;
 
