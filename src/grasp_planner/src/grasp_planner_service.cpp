@@ -139,6 +139,7 @@ void GraspPlannerService::plan(const std::shared_ptr<GraspPlannerSrv::Request> r
 
         grasps_rviz_pub_->publish(convertToVisualGraspMsg(grasps_filtered, 0.05, 0.01, 0.01, "world", {1, 0, 0.0f, 0.5f}, "filtered"));
 
+        move_group_interface_->computeMotionPlans(results) ;
 
         RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "response ok");
         response->result = !results.empty() ;

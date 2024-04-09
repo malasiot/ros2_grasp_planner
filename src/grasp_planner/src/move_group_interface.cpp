@@ -13,8 +13,8 @@ MoveGroupInterfaceNode::MoveGroupInterfaceNode(const rclcpp::NodeOptions &option
 
 bool MoveGroupInterfaceNode::setup() {
     planning_scene_monitor_ = std::make_shared<planning_scene_monitor::PlanningSceneMonitor>(shared_from_this(), "robot_description");
-
-  //  planning_scene_monitor_->startWorldGeometryMonitor() ;
+    move_group_interface_.reset(new moveit::planning_interface::MoveGroupInterface(shared_from_this(), "dual_arm"));
+   //  planning_scene_monitor_->startWorldGeometryMonitor() ;
   planning_scene_monitor_->startSceneMonitor("/monitored_planning_scene");
   robot_state_publisher_ = create_publisher<moveit_msgs::msg::DisplayRobotState>("display_robot_state", 10) ;
   
@@ -160,4 +160,41 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
 
         robot_state_publisher_->publish(drs) ;
     }
+}
+
+void MoveGroupInterfaceNode::computeMotionPlans(std::vector<GraspCandidate> &candidates) {
+    
+   
+    
+    for( auto &grasp: candidates ) {
+        moveit::planning_interface::MoveGroupInterface move_group_interface(shared_from_this(), "dual_arm");
+        move_group_interface.setPlannerId("RRTConnectkConfigDefault"); //default planener
+        move_group_interface.setPlanningTime(5);
+        move_group_interface.setGoalTolerance(0.01);
+        move_group_interface.setMaxAccelerationScalingFactor(1);
+        move_group_interface.setMaxVelocityScalingFactor(1);
+        move_group_interface.setNumPlanningAttempts(10);
+        
+        moveit::core::RobotState state(move_group_interface.getRobotModel()) ;
+
+        auto jml = state.getJointModelGroup("l_iiwa_arm") ;
+        auto rml = state.getJointModelGroup("r_iiwa_arm") ;
+
+        state.setJointGroupPositions(jml, grasp.jl_) ;
+        state.setJointGroupPositions(rml, grasp.jr_) ;
+        state.update() ;
+
+        move_group_interface.setJointValueTarget(state) ;
+                
+        moveit::planning_interface::MoveGroupInterface::Plan plan;
+        if ( static_cast<bool>(move_group_interface.plan(plan)) ) {
+            grasp.start_state_ = plan.start_state_ ;
+            grasp.trajectory_ = plan.trajectory_ ;
+
+            move_group_interface.execute(plan) ;
+            return ;
+        }
+
+    }
+    
 }
