@@ -16,7 +16,7 @@ using namespace Eigen ;
 GraspPlannerService::GraspPlannerService(const rclcpp::NodeOptions &options): rclcpp::Node("grasp_planner_service", options) {
 
     string viz_topic = declare_parameter("viz_topic", "/visual_grasps") ;
-    camera_frame_ = declare_parameter("camera_frame", "camera_optical_frame") ;
+    camera_frame_ = declare_parameter("camera_frame", "camera_color_optical_frame") ;
     gripper_offset_ = declare_parameter("gripper_offset", 0.02f) ;
     finger_width_ = declare_parameter("finger_width", 0.01f) ;
     max_results_ = declare_parameter("max_results", 3) ;

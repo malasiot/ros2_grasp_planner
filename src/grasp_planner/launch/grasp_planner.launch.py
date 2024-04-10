@@ -119,7 +119,8 @@ def generate_launch_description():
         output="screen",
         parameters=[
             robot_description,
-            { "mesh" : scene_urdf}
+            { "mesh" : scene_urdf,
+             'camera_frame': 'camera_color_optical_frame'}
         ],
         condition=IfCondition(start_virtual_camera)
     )

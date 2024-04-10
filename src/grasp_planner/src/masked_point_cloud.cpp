@@ -13,9 +13,9 @@ MaskedPointCloud::MaskedPointCloud(const rclcpp::NodeOptions &options) : rclcpp:
     camera_info_topic_ = declare_parameter("camera_info_topic", "/virtual_camera/color/camera_info");
     rgb_topic_ = declare_parameter("rgb_topic", "/virtual_camera/color/image_raw");
     depth_topic_ = declare_parameter("depth_topic", "/virtual_camera/depth/image_raw");
-    mask_topic_ = declare_parameter("mask_topic", "/robot_mask/image_raw");
-    pcl_topic_ = declare_parameter("pcl_topic", "/masked/points");
-    target_frame_ = declare_parameter("target_frame", "camera_optical_frame");
+    mask_topic_ = declare_parameter("mask_topic", "robot_mask/image_raw");
+    pcl_topic_ = declare_parameter("pcl_topic", "masked/points");
+    target_frame_ = declare_parameter("target_frame", "camera_color_optical_frame");
     depth_threshold_ = declare_parameter("depth_threshold", 10) ;
 
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
