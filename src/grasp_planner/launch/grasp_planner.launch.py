@@ -10,14 +10,10 @@ from launch_ros.substitutions import FindPackageShare
 from launch_param_builder import ParameterBuilder
 import os 
 from ament_index_python.packages import get_package_share_directory
-# may raise PackageNotFoundError
+from launch.actions import GroupAction
+from launch_ros.actions import PushRosNamespace
 
-def _octomap_launch_params(params: ParameterBuilder):
-    params.yaml("moveit2/sensors_virtual_pointcloud.yaml")
-    params.parameter("octomap_frame", "world")
-    params.parameter("octomap_resolution", 0.02)
-    params.parameter("max_range", 5.0)
-    return params.to_dict()
+# may raise PackageNotFoundError
 
 def generate_launch_description():
     # Declare arguments
@@ -106,6 +102,13 @@ def generate_launch_description():
            
         }.items()
     )
+    
+    robot_launch_ns = GroupAction(
+     actions=[
+         PushRosNamespace(namespace),
+         robot_launch,
+      ]
+   )
 
     scene_urdf = get_package_share_directory("iiwa_description") + "/urdf/mesh.urdf"
     
@@ -137,48 +140,37 @@ def generate_launch_description():
         namespace=namespace,
         output="screen"
     )
-
-    octomap_node = Node(
-        package="octomap_server",
-        executable="octomap_server_node",
-        namespace=namespace,
-        output="screen",
-        parameters=[
-            {
-               
-                "frame_id": "world",
-                "base_frame_id": "base",
-                "resolution": 0.02,
-              
-
-            }],
-            remappings=[
-            ('/cloud_in', '/masked/points')
-        ]
-        
-    )
-    
+  
     package_share_directory = get_package_share_directory('grasp_planner')
     
-    params_movegroup = ParameterBuilder('iiwa_description')
-   
-   
+    if start_virtual_camera:
+        grasp_planning_config = os.path.join(
+            package_share_directory,
+            'config',
+            'params-virtual.yaml'
+            )
+    else:
+        grasp_planning_config = os.path.join(
+            package_share_directory,
+            'config',
+            'params-rs.yaml'
+        )        
+    
     grasp_planning_node = Node(
         package="grasp_planner",
         executable="grasp_planner_service",
         namespace=namespace,
         output="screen",
         parameters=[
-            robot_description,
             robot_description_kinematics,
-        ] + [_octomap_launch_params(params_movegroup)],
+            grasp_planning_config
+        ],
     )
     
     nodes = [
         robot_launch,
         virtual_camera_node,
         robot_mask_node,
-#        octomap_node,
         graspnet_service_node,
         grasp_planning_node
     ]

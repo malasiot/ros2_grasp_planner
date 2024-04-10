@@ -48,5 +48,8 @@ private:
    
     std::shared_ptr<MoveGroupInterfaceNode> move_group_interface_ ;
     std::shared_ptr<MaskedPointCloud> masked_point_cloud_ ;
+    std::string camera_frame_ ;
+    float gripper_offset_, finger_width_ ;
+    uint max_results_ ;
   
 };

@@ -34,7 +34,7 @@ public:
         std::vector<grasp_planner_interfaces::msg::Grasp> &filtered,
         std::vector<GraspCandidate> &res) ;
 
-    void computeMotionPlans(std::vector<GraspCandidate> &candidates) ;
+    void computeMotionPlans(std::vector<GraspCandidate> &candidates, uint max_plans) ;
 private:
 
     moveit::core::RobotModelConstPtr model_ ;

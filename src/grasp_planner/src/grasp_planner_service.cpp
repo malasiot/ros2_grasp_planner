@@ -15,17 +15,19 @@ using namespace Eigen ;
 
 GraspPlannerService::GraspPlannerService(const rclcpp::NodeOptions &options): rclcpp::Node("grasp_planner_service", options) {
 
-    
-    grasps_rviz_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("/visual_grasps", 10);
+    string viz_topic = declare_parameter("viz_topic", "/visual_grasps") ;
+    camera_frame_ = declare_parameter("camera_frame", "camera_optical_frame") ;
+    gripper_offset_ = declare_parameter("gripper_offset", 0.02f) ;
+    finger_width_ = declare_parameter("finger_width", 0.01f) ;
+    max_results_ = declare_parameter("max_results", 3) ;
+       
+    grasps_rviz_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>(viz_topic, 10);
 
     graspnet_client_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
     service_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
     graspnet_client_ = create_client<GraspNet>("graspnet", rmw_qos_profile_services_default, graspnet_client_group_);
     service_ = create_service<GraspPlannerSrv>("grasp_planner_service", std::bind(&GraspPlannerService::plan, this, std::placeholders::_1, std::placeholders::_2), rmw_qos_profile_services_default, service_group_);
-
-
-
 }
 
 void GraspPlannerService::setup(const std::shared_ptr<MoveGroupInterfaceNode> &mgi, const std::shared_ptr<MaskedPointCloud> &pcl)
@@ -98,11 +100,11 @@ void GraspPlannerService::plan(const std::shared_ptr<GraspPlannerSrv::Request> r
     {
         if (!rclcpp::ok())
         {
-            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
+            RCLCPP_ERROR(get_logger(), "Interrupted while waiting for the service. Exiting.");
             response->result = 0 ;
             return ;
         }
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
+        RCLCPP_INFO(get_logger(), "service not available, waiting again...");
     }
 
     auto graspnet_result = graspnet_client_->async_send_request(graspnet_request);
@@ -111,19 +113,26 @@ void GraspPlannerService::plan(const std::shared_ptr<GraspPlannerSrv::Request> r
     auto tf_buffer = std::make_unique<tf2_ros::Buffer>(get_clock());
     auto tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
 
-    geometry_msgs::msg::TransformStamped tr  = tf_buffer->lookupTransform(
-                     "world", "camera_optical_frame", tf2::TimePointZero, tf2::durationFromSec(5));
+    Isometry3d camera_tr ;
 
-    auto camera_tr = tf2::transformToEigen(tr);
+    try {
+        geometry_msgs::msg::TransformStamped tr  = tf_buffer->lookupTransform(
+                     "world", camera_frame_, tf2::TimePointZero, tf2::durationFromSec(5));
+        camera_tr = tf2::transformToEigen(tr);
  
-  
+    } catch ( tf2::TransformException &e ) {
+        RCLCPP_ERROR(get_logger(), "Failed to read transform between 'world' and '%s': %s", camera_frame_.c_str(), e.what()) ;
+        response->result = 2 ;
+        return ;
+    }
+ 
     // Wait for the result.
      auto status = graspnet_result.wait_for(10s)  ;
    
     if ( status == std::future_status::ready )
     {
         auto resp = graspnet_result.get();
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Received %d candidate grasps", resp->grasps.size()) ;
+        RCLCPP_INFO(get_logger(), "Received %d candidate grasps", resp->grasps.size()) ;
 
         // transform to world coordinate frame
         convertToWorldCoordinates(camera_tr, resp->grasps) ;
@@ -131,22 +140,22 @@ void GraspPlannerService::plan(const std::shared_ptr<GraspPlannerSrv::Request> r
         // publish markers
         grasps_rviz_pub_->publish(convertToVisualGraspMsg(resp->grasps, 0.05, 0.01, 0.01, "world", {0, 0, 1.0f, 0.5f}, "candidates"));
 
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Filtering non-reachable candidates") ;
+        RCLCPP_INFO(get_logger(), "Filtering non-reachable candidates") ;
         vector<grasp_planner_interfaces::msg::Grasp> grasps_filtered ;
         vector<GraspCandidate> results ;
-        move_group_interface_->filterGrasps(resp->grasps, 0.02, 0.01, grasps_filtered, results) ;
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Found %d reachable grasps", results.size()) ;
+        move_group_interface_->filterGrasps(resp->grasps, gripper_offset_, finger_width_, grasps_filtered, results) ;
+        RCLCPP_INFO(get_logger(), "Found %d reachable grasps", results.size()) ;
 
         grasps_rviz_pub_->publish(convertToVisualGraspMsg(grasps_filtered, 0.05, 0.01, 0.01, "world", {1, 0, 0.0f, 0.5f}, "filtered"));
 
-        move_group_interface_->computeMotionPlans(results) ;
+        move_group_interface_->computeMotionPlans(results, max_results_) ;
 
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "response ok");
-        response->result = !results.empty() ;
+        RCLCPP_INFO(get_logger(), "Finished");
+        response->result = results.empty() ;
     }
     else
     {
         RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Graspnet service did not respond");
-        response->result = 0 ;
+        response->result = 2 ;
     }
 }

@@ -18,6 +18,8 @@ find_package(visualization_msgs REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(image_geometry REQUIRED)
+find_package(OpenMP REQUIRED)
+
 
 add_executable(grasp_planner_service
     src/grasp_planner.cpp 
@@ -49,13 +51,13 @@ ament_target_dependencies(grasp_planner_service
   moveit_ros_planning_interface
   grasp_planner_interfaces
 )
-target_link_libraries(grasp_planner_service ${OpenCV_LIBS} Eigen3::Eigen)
+target_link_libraries(grasp_planner_service ${OpenCV_LIBS} Eigen3::Eigen OpenMP::OpenMP_CXX)
 
 install(TARGETS grasp_planner_service
   DESTINATION lib/${PROJECT_NAME})
 
 install(
-  DIRECTORY launch data
+  DIRECTORY launch data config
   DESTINATION share/${PROJECT_NAME}
 )
 

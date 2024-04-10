@@ -1,0 +1,7 @@
+grasp_planning_service:
+  ros__parameters:
+    gripper_offset: 0.02
+    finger_width: 0.01
+    max_results: 3
+    
+    

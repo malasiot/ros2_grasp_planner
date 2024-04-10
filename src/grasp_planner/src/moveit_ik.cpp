@@ -50,9 +50,11 @@ std::vector<double> MoveItIKSolver::solveIK(const Eigen::Isometry3d &target) con
     state.copyJointGroupPositions(jmg, values) ;
     const std::vector<std::string> &joint_names = jmg->getActiveJointModelNames();
 
-    if ( state.setFromIK(jmg, target, ee_link_, 0.5,
+    kinematics::KinematicsQueryOptions options ;
+    options.discretization_method = kinematics::DiscretizationMethods::SOME_DISCRETIZED ;
+    if ( state.setFromIK(jmg, target, ee_link_, 0.05,
                         std::bind(&MoveItIKSolver::isIKSolutionValid, this, std::placeholders::_1, std::placeholders::_2,
-                                  std::placeholders::_3))) {
+                                  std::placeholders::_3), options)) {
         std::vector<double> solution;
         state.copyJointGroupPositions(jmg, solution);
 

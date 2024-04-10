@@ -17,12 +17,33 @@
     "program": "${workspaceFolder}/build/grasp_planner/grasp_planner_service",
    
     "args": ["--ros-args", "--params-file", "${workspaceFolder}/install/share/iiwa_description/moveit2/dual_kinematics.yaml",
-    "--params-file", "${workspaceFolder}/install/share/iiwa_description/moveit2/sensors_virtual_pointcloud.yaml" ],
+    "--params-file", "${workspaceFolder}/install/share/grasp_planner/config/params.yaml" ],
     "stopAtEntry": true,
     "cwd": "${workspaceFolder}/src/grasp_planner/",
     "environment": [
       
     ],
+    "externalConsole": false,
+    "MIMode": "gdb",
+    "setupCommands": [
+        {
+            "description": "Enable pretty-printing for gdb",
+            "text": "-enable-pretty-printing",
+            "ignoreFailures": true
+        },
+        {
+            "description": "Set Disassembly Flavor to Intel",
+            "text": "-gdb-set disassembly-flavor intel",
+            "ignoreFailures": true
+        }
+    ]
+  },
+   {
+    "name": "Attach graspnet",
+    "type": "cppdbg",
+    "request": "attach",
+    "processId":"${command:pickProcess}",
+    "program": "${workspaceFolder}/build/grasp_planner/grasp_planner_service",
     "externalConsole": false,
     "MIMode": "gdb",
     "setupCommands": [

@@ -54,7 +54,7 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
     {
         const auto &trv = grasp.translation;
         const auto &rotv = grasp.rotation;
-        count++;
+        
         Eigen::Vector3d c(trv.x, trv.y, trv.z);
         Eigen::Quaterniond rot(rotv.w, rotv.x, rotv.y, rotv.z);
         Eigen::Matrix3d m = rot.toRotationMatrix();
@@ -93,7 +93,9 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
     auto rml = state.getJointModelGroup("r_iiwa_arm") ;
     state.setToDefaultValues("r_iiwa_arm", "upright") ;
 
-    for( auto &test: tests )  {
+#pragma omp parallel for
+    for( size_t i = 0 ; i<tests.size() ; i++ )  {
+        auto &test = tests[i] ;
         auto ls = solver_left_arm.solveIK(poseFromEigen(test.l_, test.rot_));
 
         if ( !ls.empty() ) {
@@ -104,7 +106,9 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
     // right hand reachability
 
     state.setToDefaultValues("l_iiwa_arm", "upright") ;
-    for( auto &test: tests )  {
+#pragma omp parallel for
+    for( size_t i = 0 ; i<tests.size() ; i++ )  {
+        auto &test = tests[i] ;
         if ( test.ls_.empty() ) continue ;
         auto rs = solver_right_arm.solveIK(poseFromEigen(test.r_, test.rot_));
 
@@ -162,10 +166,9 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
     }
 }
 
-void MoveGroupInterfaceNode::computeMotionPlans(std::vector<GraspCandidate> &candidates) {
+void MoveGroupInterfaceNode::computeMotionPlans(std::vector<GraspCandidate> &candidates, uint max_results) {
     
-   
-    
+    uint count = 0 ;
     for( auto &grasp: candidates ) {
         moveit::planning_interface::MoveGroupInterface move_group_interface(shared_from_this(), "dual_arm");
         move_group_interface.setPlannerId("RRTConnectkConfigDefault"); //default planener
@@ -191,8 +194,9 @@ void MoveGroupInterfaceNode::computeMotionPlans(std::vector<GraspCandidate> &can
             grasp.start_state_ = plan.start_state_ ;
             grasp.trajectory_ = plan.trajectory_ ;
 
-            move_group_interface.execute(plan) ;
-            return ;
+            ++count ;
+            if ( count == max_results ) break ;
+            //move_group_interface.execute(plan) ;
         }
 
     }
