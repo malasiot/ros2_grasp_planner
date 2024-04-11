@@ -18,8 +18,8 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            vcs import src < src/iiwa_ros2/iiwa_ros2.repos
             vcs import src < src/grasp_planner/grasp_planner.repos
+            vcs import src < src/iiwa_ros2/iiwa_ros2.repos
             source /opt/ros/<< pipeline.parameters.ros-distro >>/setup.bash
             rosdep update
             rosdep install --from-paths src -y --ignore-src
