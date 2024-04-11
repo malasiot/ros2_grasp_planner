@@ -1,0 +1,11 @@
+repositories:
+    ros2_virtual_camera:
+        type: git
+        url: git@github.com:malasiot/ros2_virtual_camera.git
+        version: humble
+    iiwa_ros2:
+        type: git
+        url: git@github.com:malasiot/iiwa_ros2.git
+        version: humble
+
+
