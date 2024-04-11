@@ -10,12 +10,15 @@
 #include <moveit/move_group_interface/move_group_interface.h>
 
 struct GraspCandidate {
-    GraspCandidate(float cost, const std::vector<double> &jl, const Eigen::Vector3d &lc, const std::vector<double> &jr, const Eigen::Vector3d &rc, const Eigen::Quaterniond &r):
-        cost_(cost), dir_(r), lpos_(lc), rpos_(rc), jl_(jl), jr_(jr) {}
+    GraspCandidate(float cost, const std::vector<double> &jl, double lcl, double lm, 
+    const Eigen::Vector3d &lc, const std::vector<double> &jr, double rcl, double rm,
+     Eigen::Vector3d &rc, const Eigen::Quaterniond &r):
+        cost_(cost), dir_(r), lpos_(lc), rpos_(rc), jl_(jl), jr_(jr), lc_(lcl), rc_(rcl), lm_(lm), rm_(rm) {}
         
     Eigen::Quaterniond dir_ ;
     Eigen::Vector3d lpos_, rpos_ ;
     std::vector<double> jl_, jr_ ;
+    double lc_, lm_, rc_, rm_ ;
     float cost_ ;
     
     moveit_msgs::msg::RobotState start_state_;

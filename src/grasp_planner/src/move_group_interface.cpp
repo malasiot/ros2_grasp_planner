@@ -4,6 +4,7 @@
 #include <moveit/robot_state/conversions.h>
 #include <moveit/planning_pipeline/planning_pipeline.h>
 #include <moveit_msgs/msg/planning_scene.hpp>
+#include <moveit/kinematics_metrics/kinematics_metrics.h>
 
 using namespace std;
 using namespace Eigen;
@@ -33,7 +34,7 @@ struct ReachTest {
     Vector3d l_, r_ ;
     int candidate_ ;
     Quaterniond rot_ ;
-    bool valid_ = false ;
+    double lc_, rc_, lm_, rm_ ;
     std::vector<double> ls_, rs_ ;
 };
 
@@ -96,10 +97,12 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
 #pragma omp parallel for
     for( size_t i = 0 ; i<tests.size() ; i++ )  {
         auto &test = tests[i] ;
-        auto ls = solver_left_arm.solveIK(poseFromEigen(test.l_, test.rot_));
+        auto [ls, clearance, manip] = solver_left_arm.solveIK(poseFromEigen(test.l_, test.rot_));
 
         if ( !ls.empty() ) {
             test.ls_ = ls ;
+            test.lc_ = clearance ;
+            test.lm_ = manip ;
         }
     }
 
@@ -110,10 +113,12 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
     for( size_t i = 0 ; i<tests.size() ; i++ )  {
         auto &test = tests[i] ;
         if ( test.ls_.empty() ) continue ;
-        auto rs = solver_right_arm.solveIK(poseFromEigen(test.r_, test.rot_));
+        auto [rs, clearance, manip] = solver_right_arm.solveIK(poseFromEigen(test.r_, test.rot_));
 
         if ( !rs.empty() ) {
             test.rs_ = rs ;
+            test.rc_ = clearance ;
+            test.rm_ = manip ;
         }
     }
 
@@ -129,9 +134,12 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
         state.update() ;
 
         if ( !planning_scene->isStateColliding(state) ) {
+            RCLCPP_INFO(get_logger(), "Left hand metrics: Clearance: %f, Manipualibility: %f", test.lc_, test.lm_ );
+            RCLCPP_INFO(get_logger(), "Right hand metrics: Clearance: %f, Manipualibility: %f", test.rc_, test.rm_ );
             filtered_set.insert(test.candidate_) ;
             const auto &grasp = candidates[test.candidate_] ;
-            result.emplace_back(grasp.score, test.ls_, test.l_, test.rs_, test.r_, test.rot_);
+            result.emplace_back(grasp.score, test.ls_, test.lc_, test.lm_, test.l_, 
+                                             test.rs_, test.rc_, test.rm_, test.r_, test.rot_);
         }
     }
 
@@ -143,7 +151,10 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
 
     std::sort(result.begin(), result.end(), [](const GraspCandidate &a, const GraspCandidate &b)
     { 
-        return a.cost_ > b.cost_; 
+        double ca = a.lc_ + a.rc_, cb =  b.lc_ + b.rc_  ;
+        double ma = a.lm_ + a.rm_, mb = b.lm_ + b.rm_ ;
+
+        return ( ca > cb ) && (ma > mb ) ; // sort based on largest clearing and manipulability
     });
 
     if ( !result.empty() ) {

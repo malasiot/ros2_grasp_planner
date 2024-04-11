@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <moveit_msgs/msg/planning_scene.hpp>
+#include <moveit/kinematics_metrics/kinematics_metrics.h>
 #include <functional>
 #include <map>
 #include <Eigen/Geometry>
@@ -37,7 +38,7 @@ public:
 
     std::vector<double> solveIK(const Eigen::Isometry3d &target,
                                              const std::map<std::string, double> &seed) const;
-    std::vector<double> solveIK(const Eigen::Isometry3d &target) const;
+    std::tuple<std::vector<double>, double, double> solveIK(const Eigen::Isometry3d &target) const;
 
     std::vector<std::string> getJointNames() const;
 
@@ -58,5 +59,6 @@ protected:
     std::string group_, ee_link_ ;
 
     planning_scene::PlanningSceneConstPtr planning_scene_;
+    kinematics_metrics::KinematicsMetricsPtr kinematic_metrics_ ;
 };
 

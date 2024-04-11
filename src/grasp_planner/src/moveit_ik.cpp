@@ -1,7 +1,7 @@
 #include "moveit_ik.hpp"
 
 #include <moveit/planning_scene_monitor/planning_scene_monitor.h>
-
+#include <moveit/kinematics_metrics/kinematics_metrics.h>
 
 using namespace std::placeholders;
 
@@ -9,7 +9,7 @@ MoveItIKSolver::MoveItIKSolver(const planning_scene::PlanningSceneConstPtr &scen
     const std::string &planning_group,  const std::string &ee_link, double dist_threshold)
     : planning_scene_(scene), group_(planning_group), ee_link_(ee_link), distance_threshold_(dist_threshold)
 {
-   
+   kinematic_metrics_.reset(new kinematics_metrics::KinematicsMetrics(scene->getRobotModel()));
 }
 
 
@@ -42,7 +42,7 @@ std::vector<double> MoveItIKSolver::solveIK(const Eigen::Isometry3d &target,
     return {};
 }
 
-std::vector<double> MoveItIKSolver::solveIK(const Eigen::Isometry3d &target) const {
+std::tuple<std::vector<double>, double, double> MoveItIKSolver::solveIK(const Eigen::Isometry3d &target) const {
     moveit::core::RobotState state = getRobotState() ;
     auto jmg = state.getJointModelGroup(group_) ;
 
@@ -58,7 +58,11 @@ std::vector<double> MoveItIKSolver::solveIK(const Eigen::Isometry3d &target) con
         std::vector<double> solution;
         state.copyJointGroupPositions(jmg, solution);
 
-        return solution;
+        double condition_number, clearance ;
+        kinematic_metrics_->getManipulability(state, jmg, condition_number) ;
+        clearance = planning_scene_->distanceToCollision(state, planning_scene_->getAllowedCollisionMatrix()) ;
+      
+        return { solution, clearance, condition_number } ;
     }
 
     return {};
