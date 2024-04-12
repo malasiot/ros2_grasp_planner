@@ -14,7 +14,7 @@ jobs:
       - checkout
       - add_ssh_keys:
           fingerprints:
-            - "06:6f:d3:e8:66:06:85:75:1a:de:da:64:93:c1:aa:09"
+            - "SHA256:gQeR8j4SUkxL9i4AJcT0pMyqm2y4v6orATFQv8lX6q4"
       - run:
           name: "Update"
           command: sudo apt update 
