@@ -6,18 +6,32 @@ parameters:
     default: "humble"
 
 jobs:
+  restore_submodules:
+    docker:
+      - image: malasiot/sestosenso-certh-grasp-planner:latest
+    resource_class: medium
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "06:6f:d3:e8:66:06:85:75:1a:de:da:64:93:c1:aa:09"
+      - run:
+          name: "Update"
+          command: sudo apt update 
+      - run:
+          name: Restore Submodules
+          command: |
+            git submodule sync && git submodule update --init
+      - persist_to_workspace:
+          root: .
+          paths:
+            - src
   build:
     docker:
       - image: malasiot/sestosenso-certh-grasp-planner:latest
     resource_class: large
     steps:
       - checkout
-      - add_ssh_keys:
-          fingerprints:
-            - "06:6f:d3:e8:66:06:85:75:1a:de:da:64:93:c1:aa:09"
-#      - run:
-#          name: Install Submodules
-#          command: git submodule sync && git submodule update --init
       - run:
           name: Install dependencies
           command: |
@@ -75,8 +89,13 @@ jobs:
 workflows:
   build_test_lint:
     jobs:
-      - build
+      - lint
+      - restore_submodules:
+          requires:
+            - lint
+      - build:
+          requires:
+            - restore_submodules
       - test:
           requires:
             - build
-      - lint

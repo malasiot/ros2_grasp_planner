@@ -1,7 +1,4 @@
 repositories:
-    ros2_common_interfaces:
-        type: git
-        url: git@github.com:SestosensoEU/ros2_common_interfaces.git
     ros2_virtual_camera:
         type: git
         url: git@github.com:malasiot/ros2_virtual_camera.git
