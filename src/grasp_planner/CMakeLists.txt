@@ -10,6 +10,7 @@ find_package(ament_cmake REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(grasp_planner_interfaces REQUIRED)
+find_package(grasp_planner_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV 4 REQUIRED core imgproc)
@@ -49,6 +50,7 @@ ament_target_dependencies(grasp_planner_service
   tf2
   tf2_ros tf2_eigen
   moveit_ros_planning_interface
+  grasp_planner_msgs
   grasp_planner_interfaces
 )
 target_link_libraries(grasp_planner_service ${OpenCV_LIBS} Eigen3::Eigen OpenMP::OpenMP_CXX)

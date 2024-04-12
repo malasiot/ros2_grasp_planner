@@ -38,7 +38,7 @@ public:
 
     std::vector<double> solveIK(const Eigen::Isometry3d &target,
                                              const std::map<std::string, double> &seed) const;
-    std::tuple<std::vector<double>, double, double> solveIK(const Eigen::Isometry3d &target) const;
+    std::tuple<std::vector<double>, double> solveIK(const Eigen::Isometry3d &target) const;
 
     std::vector<std::string> getJointNames() const;
 

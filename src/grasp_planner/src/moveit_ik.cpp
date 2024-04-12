@@ -42,7 +42,7 @@ std::vector<double> MoveItIKSolver::solveIK(const Eigen::Isometry3d &target,
     return {};
 }
 
-std::tuple<std::vector<double>, double, double> MoveItIKSolver::solveIK(const Eigen::Isometry3d &target) const {
+std::tuple<std::vector<double>, double> MoveItIKSolver::solveIK(const Eigen::Isometry3d &target) const {
     moveit::core::RobotState state = getRobotState() ;
     auto jmg = state.getJointModelGroup(group_) ;
 
@@ -58,11 +58,10 @@ std::tuple<std::vector<double>, double, double> MoveItIKSolver::solveIK(const Ei
         std::vector<double> solution;
         state.copyJointGroupPositions(jmg, solution);
 
-        double condition_number, clearance ;
+        double condition_number ;
         kinematic_metrics_->getManipulability(state, jmg, condition_number) ;
-        clearance = planning_scene_->distanceToCollision(state, planning_scene_->getAllowedCollisionMatrix()) ;
-      
-        return { solution, clearance, condition_number } ;
+        
+        return { solution,  condition_number } ;
     }
 
     return {};
@@ -75,8 +74,8 @@ bool MoveItIKSolver::isIKSolutionValid(moveit::core::RobotState *state, const mo
     state->update();
 
     if ( !planning_scene_->isStateColliding(*state, jmg->getName(), false) ) {
-      //  if (planning_scene_->distanceToCollision(*state, planning_scene_->getAllowedCollisionMatrix()) < distance_threshold_) 
-      //    return true ;
+        if (planning_scene_->distanceToCollision(*state, planning_scene_->getAllowedCollisionMatrix()) < distance_threshold_) 
+          return true ;
       return true ;
     }
 

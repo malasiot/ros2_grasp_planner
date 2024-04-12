@@ -13,7 +13,7 @@
 #include "message_filters/sync_policies/approximate_time.h"
 #include "message_filters/subscriber.h"
 #include "image_transport/image_transport.hpp"
-#include "grasp_planner_interfaces/srv/grasp_planner.hpp"
+#include "grasp_planner_msgs/srv/grasp_planner.hpp"
 #include "grasp_planner_interfaces/srv/grasp_net.hpp"
 #include "cv_bridge/cv_bridge.h"
 
@@ -25,8 +25,6 @@ public:
     GraspPlannerService(const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
 
     void setup(const std::shared_ptr<MoveGroupInterfaceNode> &mgi, const std::shared_ptr<MaskedPointCloud> &pcl);
-
- 
 private:
 
  void maskCallback(const sensor_msgs::msg::Image::ConstSharedPtr &msg);
@@ -35,7 +33,7 @@ private:
 
 private:
    
-    using GraspPlannerSrv = grasp_planner_interfaces::srv::GraspPlanner ;
+    using GraspPlannerSrv = grasp_planner_msgs::srv::GraspPlanner ;
     using GraspNet = grasp_planner_interfaces::srv::GraspNet;
 
     rclcpp::Service<GraspPlannerSrv>::SharedPtr service_ ;
@@ -49,7 +47,7 @@ private:
     std::shared_ptr<MoveGroupInterfaceNode> move_group_interface_ ;
     std::shared_ptr<MaskedPointCloud> masked_point_cloud_ ;
     std::string camera_frame_ ;
-    float gripper_offset_, finger_width_ ;
+    float gripper_offset_, finger_width_, clearance_ ;
     uint max_results_ ;
   
 };
