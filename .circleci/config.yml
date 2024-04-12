@@ -12,6 +12,9 @@ jobs:
     resource_class: large
     steps:
       - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "06:6f:d3:e8:66:06:85:75:1a:de:da:64:93:c1:aa:09"
 #      - run:
 #          name: Install Submodules
 #          command: git submodule sync && git submodule update --init
