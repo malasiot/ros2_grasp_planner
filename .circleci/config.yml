@@ -6,35 +6,19 @@ parameters:
     default: "humble"
 
 jobs:
-  restore_submodules:
-    docker:
-      - image: malasiot/sestosenso-certh-grasp-planner:latest
-    resource_class: medium
-    steps:
-      - checkout
-      - add_ssh_keys:
-          fingerprints:
-            - "SHA256:tWrpOqd7odyWxSZGSHz6i1mu8L10y70rg6FBKJpKPnw"
-      - run:
-          name: "Update"
-          command: sudo apt update 
-      - run:
-          name: Restore Submodules
-          command: |
-            git submodule sync && git submodule update --init
-      - persist_to_workspace:
-          root: .
-          paths:
-            - src
   build:
     docker:
       - image: malasiot/sestosenso-certh-grasp-planner:latest
     resource_class: large
     steps:
       - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "SHA256:tWrpOqd7odyWxSZGSHz6i1mu8L10y70rg6FBKJpKPnw"
       - run:
           name: Install dependencies
           command: |
+            git submodule sync && git submodule update --init
             vcs import src < src/grasp_planner/grasp_planner.repos
             vcs import src < src/iiwa_ros2/iiwa_ros2.repos
             source /opt/ros/<< pipeline.parameters.ros-distro >>/setup.bash
@@ -90,12 +74,9 @@ workflows:
   build_test_lint:
     jobs:
       - lint
-      - restore_submodules:
-          requires:
-            - lint
       - build:
           requires:
-            - restore_submodules
+            - lint
       - test:
           requires:
             - build
