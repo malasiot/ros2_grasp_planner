@@ -1,3 +1,0 @@
-[submodule "src/ros2_common_interfaces"]
-	path = src/ros2_common_interfaces
-	url = git@github.com:SestosensoEU/ros2_common_interfaces.git
