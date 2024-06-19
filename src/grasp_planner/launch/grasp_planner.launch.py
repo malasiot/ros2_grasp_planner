@@ -173,7 +173,7 @@ def generate_launch_description():
         virtual_camera_node,
         robot_mask_node,
         graspnet_service_node,
-        grasp_planning_node
+  #      grasp_planning_node
     ]
 
     return LaunchDescription(declared_arguments + nodes)
