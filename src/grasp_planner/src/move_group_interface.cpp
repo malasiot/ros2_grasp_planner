@@ -13,13 +13,14 @@ MoveGroupInterfaceNode::MoveGroupInterfaceNode(const rclcpp::NodeOptions &option
 {
 }
 
-bool MoveGroupInterfaceNode::setup()
+void MoveGroupInterfaceNode::setup()
 {
     planning_scene_monitor_ = std::make_shared<planning_scene_monitor::PlanningSceneMonitor>(shared_from_this(), "robot_description");
     move_group_interface_.reset(new moveit::planning_interface::MoveGroupInterface(shared_from_this(), "dual_arm"));
     //  planning_scene_monitor_->startWorldGeometryMonitor() ;
     planning_scene_monitor_->startSceneMonitor("/monitored_planning_scene");
     robot_state_publisher_ = create_publisher<moveit_msgs::msg::DisplayRobotState>("display_robot_state", 10);
+
 }
 
 static Eigen::Isometry3d poseFromEigen(const Vector3d &c, const Quaterniond &r)
@@ -61,9 +62,7 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
         Eigen::Vector3d c(trv.x, trv.y, trv.z);
         Eigen::Quaterniond rot(rotv.w, rotv.x, rotv.y, rotv.z);
         Eigen::Matrix3d m = rot.toRotationMatrix();
-
-        Eigen::Matrix3d o = m.adjoint() * m ;
-
+       
         auto approach = m.col(0).eval();
         auto binormal = m.col(1).eval();
         auto xc = m.col(2).eval() ;
@@ -101,7 +100,7 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
     auto rml = state.getJointModelGroup("r_iiwa_arm");
     state.setToDefaultValues("r_iiwa_arm", "upright");
 
-//#pragma omp parallel for
+#pragma omp parallel for
     for (size_t i = 0; i < tests.size(); i++)
     {
         auto &test = tests[i];
@@ -110,10 +109,6 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
         if (!ls.empty())
         {
             test.ls_ = ls;
-            std::vector<double> angles(7) ;
-            for( int i=0 ; i<ls.size() ; i++) {
-                angles[i] = ls[i] * 180 / M_PI;
-            }
             test.lm_ = manip;
         }
     }
@@ -121,7 +116,7 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
     // right hand reachability
 
     state.setToDefaultValues("l_iiwa_arm", "upright");
-//#pragma omp parallel for
+#pragma omp parallel for
     for (size_t i = 0; i < tests.size(); i++)
     {
         auto &test = tests[i];
@@ -129,16 +124,9 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
             continue;
         auto [rs, manip] = solver_right_arm.solveIK(poseFromEigen(test.r_, test.rot_));
 
-        if (!rs.empty())
-        {
+        if (!rs.empty())  {
             test.rs_ = rs;
-           
-            std::vector<double> angles(7) ;
-            for( int i=0 ; i<rs.size() ; i++) {
-                angles[i] = rs[i] * 180 / M_PI;
-            }
-             test.rm_ = manip;
-
+            test.rm_ = manip;
         }
     }
 
@@ -146,8 +134,7 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
 
     std::set<int> filtered_set;
 
-    for (auto &test : tests)
-    {
+    for (auto &test : tests)  {
         if (test.ls_.empty() || test.rs_.empty())
             continue;
 

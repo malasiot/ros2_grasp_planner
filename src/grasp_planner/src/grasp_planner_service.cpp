@@ -87,10 +87,7 @@ void GraspPlannerService::plan(const std::shared_ptr<GraspPlannerSrv::Request> r
     rgb_bridge->toImageMsg(graspnet_request->rgb);
 
     // Convert OpenCV Mat to ROS Image
-
-    auto width = rgb.cols;
-    auto height = rgb.rows;
-
+   
     auto depth_bridge = std::make_shared<cv_bridge::CvImage>(header, sensor_msgs::image_encodings::MONO16, depth.clone());
     depth_bridge->toImageMsg(graspnet_request->depth);
 
@@ -132,7 +129,7 @@ void GraspPlannerService::plan(const std::shared_ptr<GraspPlannerSrv::Request> r
     if ( status == std::future_status::ready )
     {
         auto resp = graspnet_result.get();
-        RCLCPP_INFO(get_logger(), "Received %d candidate grasps", resp->grasps.size()) ;
+        RCLCPP_INFO(get_logger(), "Received %ld candidate grasps", resp->grasps.size()) ;
 
         // transform to world coordinate frame
         convertToWorldCoordinates(camera_tr, resp->grasps) ;
@@ -144,7 +141,7 @@ void GraspPlannerService::plan(const std::shared_ptr<GraspPlannerSrv::Request> r
         vector<grasp_planner_interfaces::msg::Grasp> grasps_filtered ;
         vector<GraspCandidate> results ;
         move_group_interface_->filterGrasps(resp->grasps, gripper_offset_, finger_width_, clearance_, grasps_filtered, results) ;
-        RCLCPP_INFO(get_logger(), "Found %d reachable grasps", results.size()) ;
+        RCLCPP_INFO(get_logger(), "Found %ld reachable grasps", results.size()) ;
 
         grasps_rviz_pub_->publish(convertToVisualGraspMsg(grasps_filtered, 0.05, 0.01, 0.01, "world", {1, 0, 0.0f, 0.5f}, "filtered"));
 

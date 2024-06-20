@@ -13,7 +13,7 @@ struct GraspCandidate {
     GraspCandidate(float cost, const std::vector<double> &jl, double lm, 
     const Eigen::Vector3d &lc, const std::vector<double> &jr, double rm,
      Eigen::Vector3d &rc, const Eigen::Quaterniond &r):
-        cost_(cost), dir_(r), lpos_(lc), rpos_(rc), jl_(jl), jr_(jr), lm_(lm), rm_(rm) {}
+        dir_(r), lpos_(lc), rpos_(rc), jl_(jl), jr_(jr), lm_(lm), rm_(rm), cost_(cost)  {}
         
     Eigen::Quaterniond dir_ ;
     Eigen::Vector3d lpos_, rpos_ ;
@@ -30,7 +30,7 @@ class MoveGroupInterfaceNode: public rclcpp::Node {
 public:
     MoveGroupInterfaceNode(const rclcpp::NodeOptions &options = rclcpp::NodeOptions()) ;
 
-    bool setup() ;
+    void setup() ;
 
     void filterGrasps(const std::vector<grasp_planner_interfaces::msg::Grasp> &candidates, 
         float offset, float finger_width, float clearance_thresh, 
