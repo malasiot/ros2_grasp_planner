@@ -44,7 +44,7 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             'start_virtual_camera',
-            default_value='false',
+            default_value='true',
             description='Start virtual camera',
         )
     )
@@ -58,22 +58,6 @@ def generate_launch_description():
                          configuration needs to be updated. Expected format "<ns>/".',
         )
     )
-
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            'camera_namespace',
-            default_value='/camera/camera_213322072140/aligned_depth_to_color/',
-            description='Namespace of camera where I should find image_raw and camerainfo topics',
-        )
-    )
-
-#    declared_arguments.append(
-#        DeclareLaunchArgument(
-#            'camera_frame',
-#            default_value='camera_213322072140_color_optical_frame',
-#            description='The topic where camera static tf transform is published',
-#        )
-#    )
    
 
     # Initialize Arguments
@@ -82,10 +66,8 @@ def generate_launch_description():
     description_file = LaunchConfiguration('description_file')
     start_rviz = LaunchConfiguration('start_rviz')
     namespace = LaunchConfiguration('namespace')
- #   camera_frame = LaunchConfiguration('camera_frame')
-
-    camera_frame = "camera_213322072140_color_optical_frame"
-    
+    start_virtual_camera = LaunchConfiguration('start_virtual_camera')
+   
     # Get URDF via xacro
     robot_description_content = Command(
         [
@@ -115,18 +97,41 @@ def generate_launch_description():
         launch_arguments={
             'description_package': description_package,
             'description_file': description_file,
-            'start_rviz': start_rviz
+            'start_rviz': start_rviz,
+          
+           
         }.items()
     )
     
+    robot_launch_ns = GroupAction(
+     actions=[
+         PushRosNamespace(namespace),
+         robot_launch,
+      ]
+   )
+
+    scene_urdf = get_package_share_directory("iiwa_description") + "/urdf/mesh.urdf"
+    
+    virtual_camera_node = Node(
+        package="ros2_virtual_camera",
+        executable="virtual_camera",
+        namespace=namespace,
+        output="screen",
+        parameters=[
+            robot_description,
+            { "mesh" : scene_urdf,
+             'camera_frame': 'camera_color_optical_frame'}
+        ],
+        condition=IfCondition(start_virtual_camera)
+    )
+
     robot_mask_node = Node(
         package="ros2_virtual_camera",
         executable="robot_mask",
         namespace=namespace,
         output="screen",
         parameters=[
-            robot_description,
-            { "camera_frame": camera_frame }
+            robot_description
         ]
     )
 
@@ -139,20 +144,18 @@ def generate_launch_description():
   
     package_share_directory = get_package_share_directory('grasp_planner')
     
-    grasp_planning_config = os.path.join(
+    if start_virtual_camera:
+        grasp_planning_config = os.path.join(
+            package_share_directory,
+            'config',
+            'params-virtual.yaml'
+            )
+    else:
+        grasp_planning_config = os.path.join(
             package_share_directory,
             'config',
             'params-rs.yaml'
-    )        
-
-    camera_tf_node = Node(
-        package = "tf2_ros", 
-        executable = "static_transform_publisher",
-        arguments = [ "--x",  "-0.030259363850628995", "--y", "0.3985303170963656", "--z",  "1.0012964230101555",
-                     "--qw", "-0.24674339982780538", "--qx",  "0.68689410475534141", "--qy",  "-0.63356047244717506", "--qz", "0.25670082050177889",
-                      "--frame-id", "iiwa_left_base", "--child-frame-id", "camera_213322072140_color_optical_frame" 
-                    ]
-    )
+        )        
     
     grasp_planning_node = Node(
         package="grasp_planner",
@@ -167,10 +170,10 @@ def generate_launch_description():
     
     nodes = [
         robot_launch,
-        camera_tf_node,
+        virtual_camera_node,
         robot_mask_node,
         graspnet_service_node,
-        grasp_planning_node
+  #      grasp_planning_node
     ]
 
     return LaunchDescription(declared_arguments + nodes)

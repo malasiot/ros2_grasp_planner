@@ -164,12 +164,12 @@ class GraspNetService(Node):
         super().__init__('graspnet_service_node')
         
         self.declare_parameter('checkpoint_path', os.path.join(get_package_share_directory("graspnet_service"), "weights/checkpoint-rs.tar")) 
-        self.declare_parameter('num_point', 20000)
+        self.declare_parameter('num_point', 75000)
         self.declare_parameter('num_view', 300)
         self.declare_parameter('collision_thresh', 0.01)
-        self.declare_parameter('voxel_size', 0.01)
-        self.declare_parameter('factor_depth', 3000.0)
-        self.declare_parameter('score_thresh', 0.8)
+        self.declare_parameter('voxel_size', 0.005)
+        self.declare_parameter('factor_depth', 4000.0)
+        self.declare_parameter('score_thresh', 0.25)
     
         self.net = self.get_net()
         self.srv = self.create_service(GraspNetInterface, 'graspnet', self.graspnet_callback)
@@ -179,6 +179,7 @@ class GraspNetService(Node):
         rgb_image = bridge.imgmsg_to_cv2(request.rgb, desired_encoding='bgr8')
         depth_image = bridge.imgmsg_to_cv2(request.depth, desired_encoding='mono16')
         camera_info = request.camera_info
+        print(camera_info)
         end_points, cloud = self.get_and_process_data(rgb_image, depth_image, camera_info)
         gg = self.get_grasps(end_points)
         

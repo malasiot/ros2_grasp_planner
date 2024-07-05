@@ -25,6 +25,7 @@ public:
 
     std::tuple<cv::Mat, cv::Mat, sensor_msgs::msg::CameraInfo> getFrame();
     bool hasFrame() const { return frame_ready_; }
+    const std::string &getCameraFrame() const { return camera_frame_ ; }
 
 private:
     void maskCallback(const sensor_msgs::msg::Image::ConstSharedPtr &msg);
@@ -48,7 +49,7 @@ private:
     cv::Mat rgb_, depth_, mask_, depth_masked_;
     sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info_ = nullptr;
 
-    std::string camera_info_topic_, rgb_topic_, depth_topic_, mask_topic_, pcl_topic_, target_frame_;
+    std::string camera_info_topic_, rgb_topic_, depth_topic_, mask_topic_, pcl_topic_, camera_frame_;
     std::mutex frame_mutex_;
     std::atomic<bool> frame_ready_{false};
     uint depth_threshold_;

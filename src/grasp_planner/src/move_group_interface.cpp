@@ -48,8 +48,8 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
 {
     planning_scene_monitor::LockedPlanningSceneRO planning_scene(planning_scene_monitor_);
 
-    MoveItIKSolver solver_left_arm(planning_scene, "l_iiwa_arm", "l_ee", dist_thresh);
-    MoveItIKSolver solver_right_arm(planning_scene, "r_iiwa_arm", "r_ee", dist_thresh);
+    MoveItIKSolver solver_left_arm(planning_scene, "iiwa_left_arm", "iiwa_left_ee", dist_thresh);
+    MoveItIKSolver solver_right_arm(planning_scene, "iiwa_right_arm", "iiwa_right_ee", dist_thresh);
 
     std::vector<ReachTest> tests;
 
@@ -87,7 +87,7 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
         ReachTest test;
         test.l_ = left_tip;
         test.r_ = right_tip;
-        test.rot_ = qrot;
+        test.rot_ = trot;
         test.candidate_ = count++;
 
         tests.emplace_back(test);
@@ -96,9 +96,9 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
     // left hand reachability
 
     moveit::core::RobotState state(planning_scene->getRobotModel());
-    auto jml = state.getJointModelGroup("l_iiwa_arm");
-    auto rml = state.getJointModelGroup("r_iiwa_arm");
-    state.setToDefaultValues("r_iiwa_arm", "upright");
+    auto jml = state.getJointModelGroup("iiwa_left_arm");
+    auto rml = state.getJointModelGroup("iiwa_right_arm");
+    state.setToDefaultValues("iiwa_right_arm", "upright");
 
 #pragma omp parallel for
     for (size_t i = 0; i < tests.size(); i++)
@@ -115,7 +115,7 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
 
     // right hand reachability
 
-    state.setToDefaultValues("l_iiwa_arm", "upright");
+    state.setToDefaultValues("iiwa_left_arm", "upright");
 #pragma omp parallel for
     for (size_t i = 0; i < tests.size(); i++)
     {
@@ -171,8 +171,8 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
 
         moveit::core::RobotState state(planning_scene->getRobotModel());
 
-        auto jml = state.getJointModelGroup("l_iiwa_arm");
-        auto rml = state.getJointModelGroup("r_iiwa_arm");
+        auto jml = state.getJointModelGroup("iiwa_left_arm");
+        auto rml = state.getJointModelGroup("iiwa_right_arm");
 
         state.setJointGroupPositions(jml, r.jl_);
         state.setJointGroupPositions(rml, r.jr_);
@@ -227,8 +227,8 @@ void MoveGroupInterfaceNode::computeMotionPlans(std::vector<GraspCandidate> &can
     {
         moveit::core::RobotState state(move_group_interface.getRobotModel());
 
-        auto jml = state.getJointModelGroup("l_iiwa_arm");
-        auto rml = state.getJointModelGroup("r_iiwa_arm");
+        auto jml = state.getJointModelGroup("iiwa_left_arm");
+        auto rml = state.getJointModelGroup("iiwa_right_arm");
 
         state.setJointGroupPositions(jml, grasp.jl_);
         state.setJointGroupPositions(rml, grasp.jr_);
