@@ -8,6 +8,7 @@
 #include "message_filters/sync_policies/approximate_time.h"
 #include "message_filters/subscriber.h"
 #include "image_transport/image_transport.hpp"
+#include "image_transport/subscriber_filter.hpp"
 #include "tf2_ros/transform_listener.h"
 #include "tf2_ros/buffer.h"
 #include "cv_bridge/cv_bridge.h"
@@ -34,7 +35,7 @@ private:
 
 private:
     message_filters::Subscriber<sensor_msgs::msg::CameraInfo> caminfo_sub_;
-    message_filters::Subscriber<sensor_msgs::msg::Image> rgb_sub_, depth_sub_;
+  //  message_filters::Subscriber<sensor_msgs::msg::Image> rgb_sub_, depth_sub_;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
     std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
 
@@ -43,6 +44,7 @@ private:
     std::unique_ptr<Synchronizer> sync_;
 
     std::shared_ptr<image_transport::ImageTransport> image_transport_;
+    image_transport::SubscriberFilter rgb_sub_, depth_sub_ ;
     std::shared_ptr<image_transport::Subscriber> mask_sub_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pcl_pub_;
 

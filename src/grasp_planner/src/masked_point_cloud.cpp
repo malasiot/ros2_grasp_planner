@@ -17,6 +17,8 @@ MaskedPointCloud::MaskedPointCloud(const rclcpp::NodeOptions &options) : rclcpp:
     camera_frame_ = declare_parameter("camera_frame", "camera_color_optical_frame");
     depth_threshold_ = declare_parameter("depth_threshold", 10);
     declare_parameter("cutoff_volume", std::vector<double>{});
+    declare_parameter("image_transport", "raw");
+    declare_parameter("depth_image_transport", "raw");
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 }
@@ -29,8 +31,9 @@ void MaskedPointCloud::setup()
     depth_topic_ = get_parameter("depth_topic").as_string();
     camera_frame_ = get_parameter("camera_frame").as_string();
 
-    rgb_sub_.subscribe(this, rgb_topic_, rmw_qos_profile_sensor_data);
-    depth_sub_.subscribe(this, depth_topic_, rmw_qos_profile_sensor_data);
+    
+    // rgb_sub_.subscribe(this, rgb_topic_, rmw_qos_profile_sensor_data);
+    // depth_sub_.subscribe(this, depth_topic_, rmw_qos_profile_sensor_data);
     caminfo_sub_.subscribe(this, camera_info_topic_, rmw_qos_profile_sensor_data);
 
     sync_.reset(new Synchronizer(SyncPolicy(10), rgb_sub_, depth_sub_, caminfo_sub_));
@@ -40,6 +43,32 @@ void MaskedPointCloud::setup()
 
     mask_sub_ = std::make_shared<image_transport::Subscriber>(image_transport_->subscribe(mask_topic_, 10,
                                                                                           std::bind(&MaskedPointCloud::maskCallback, this, std::placeholders::_1)));
+
+    // parameter for depth_image_transport hint
+    image_transport::TransportHints depth_hints(this, "raw", "depth_image_transport");
+
+    rclcpp::SubscriptionOptions sub_opts;
+    // Update the subscription options to allow reconfigurable qos settings.
+    sub_opts.qos_overriding_options = rclcpp::QosOverridingOptions{
+        {
+            // Here all policies that are desired to be reconfigurable are listed.
+            rclcpp::QosPolicyKind::Depth,
+            rclcpp::QosPolicyKind::Durability,
+            rclcpp::QosPolicyKind::History,
+            rclcpp::QosPolicyKind::Reliability,
+        }};
+
+    // depth image can use different transport.(e.g. compressedDepth)
+    depth_sub_.subscribe(
+        this, depth_topic_,
+        depth_hints.getTransport(), rmw_qos_profile_default, sub_opts);
+
+    // rgb uses normal ros transport hints.
+    image_transport::TransportHints hints(this);
+    rgb_sub_.subscribe(
+        this, rgb_topic_,
+        hints.getTransport(), rmw_qos_profile_default, sub_opts);
+
     pcl_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>(pcl_topic_, 10);
 
     geometry_msgs::msg::TransformStamped t;
@@ -150,13 +179,13 @@ static void convert(
     sensor_msgs::PointCloud2Iterator<float> iter_y(*cloud_msg, "y");
     sensor_msgs::PointCloud2Iterator<float> iter_z(*cloud_msg, "z");
 
-    bool has_cutoff = ( cutoff.size() == 6 ) ;
-    float minx = ( has_cutoff ) ? cutoff[0] : -std::numeric_limits<float>::max() ;
-    float maxx = ( has_cutoff ) ? cutoff[1] :  std::numeric_limits<float>::max() ;
-    float miny = ( has_cutoff ) ? cutoff[2] : -std::numeric_limits<float>::max() ;
-    float maxy = ( has_cutoff ) ? cutoff[3] :  std::numeric_limits<float>::max() ;
-    float minz = ( has_cutoff ) ? cutoff[4] : -std::numeric_limits<float>::max() ;
-    float maxz = ( has_cutoff ) ? cutoff[5] :  std::numeric_limits<float>::max() ;
+    bool has_cutoff = (cutoff.size() == 6);
+    float minx = (has_cutoff) ? cutoff[0] : -std::numeric_limits<float>::max();
+    float maxx = (has_cutoff) ? cutoff[1] : std::numeric_limits<float>::max();
+    float miny = (has_cutoff) ? cutoff[2] : -std::numeric_limits<float>::max();
+    float maxy = (has_cutoff) ? cutoff[3] : std::numeric_limits<float>::max();
+    float minz = (has_cutoff) ? cutoff[4] : -std::numeric_limits<float>::max();
+    float maxz = (has_cutoff) ? cutoff[5] : std::numeric_limits<float>::max();
 
     const uint16_t *depth_row = reinterpret_cast<const uint16_t *>(&depth.data[0]);
     int row_step = depth.step / sizeof(uint16_t);
@@ -179,12 +208,13 @@ static void convert(
 
             Eigen::Vector3d tp = tr * Eigen::Vector3d(X, Y, Z);
 
-            if ( tp.x() < minx ||
-                 tp.x() > maxx || 
-                 tp.y() < miny || 
-                 tp.y() > maxy ||
-                 tp.z() < minz || 
-                 tp.z() > maxz ) {
+            if (tp.x() < minx ||
+                tp.x() > maxx ||
+                tp.y() < miny ||
+                tp.y() > maxy ||
+                tp.z() < minz ||
+                tp.z() > maxz)
+            {
                 *iter_x = *iter_y = *iter_z = bad_point;
                 continue;
             }
@@ -222,7 +252,7 @@ void MaskedPointCloud::publishCloud(const cv::Mat &dim, const sensor_msgs::msg::
         image_geometry::PinholeCameraModel model;
         model.fromCameraInfo(caminfo);
 
-        auto cutoff = get_parameter("cutoff_volume").as_double_array() ;
+        auto cutoff = get_parameter("cutoff_volume").as_double_array();
         convert(dim, model, camera_transform_, cloud_msg, cutoff);
 
         pcl_pub_->publish(*cloud_msg);

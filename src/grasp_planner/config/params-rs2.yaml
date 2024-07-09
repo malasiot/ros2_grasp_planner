@@ -6,10 +6,12 @@ grasp_planning_service:
     camera_frame: camera_213322072140_color_optical_frame
 masked_point_cloud:
   ros__parameters:    
-    rgb_topic: /camera/camera_213322072140/color/image_raw
-    depth_topic: /camera/camera_213322072140/aligned_depth_to_color/image_raw
-    camera_info_topic: /camera/camera_213322072140/color/camera_info
+    rgb_topic: /camera_213322072140/color/image_raw
+    depth_topic: /camera_213322072140/aligned_depth_to_color/image_raw
+    camera_info_topic: /camera_213322072140/color/camera_info
     camera_frame: camera_213322072140_color_optical_frame
+    image_transport: compressed
+    depth_image_transport: compressed
     cutoff_volume: [0.6, 1.3, -0.6, 0.6, -0.02, 0.35]
 
     

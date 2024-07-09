@@ -142,7 +142,7 @@ def generate_launch_description():
     grasp_planning_config = os.path.join(
             package_share_directory,
             'config',
-            'params-rs.yaml'
+            'params-rs2.yaml'
     )        
 
     camera_tf_node = Node(
