@@ -8,7 +8,7 @@
     "program": "${workspaceFolder}/build/grasp_planner/grasp_planner_service",
    
     "args": ["--ros-args", "--params-file", "${workspaceFolder}/install/share/iiwa_description/moveit2/dual_kinematics.yaml",
-    "--params-file", "${workspaceFolder}/install/share/grasp_planner/config/params-rs.yaml" ],
+    "--params-file", "${workspaceFolder}/install/share/grasp_planner/config/params-rs2.yaml" ],
     "stopAtEntry": true,
     "cwd": "${workspaceFolder}/src/grasp_planner/",
     "environment": [

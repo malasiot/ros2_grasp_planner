@@ -26,7 +26,7 @@ public:
 
     std::tuple<cv::Mat, cv::Mat, sensor_msgs::msg::CameraInfo> getFrame();
     bool hasFrame() const { return frame_ready_; }
-    const std::string &getCameraFrame() const { return camera_frame_ ; }
+    std::string getCameraFrame() const { return get_parameter("camera_frame").as_string() ; }
 
 private:
     void maskCallback(const sensor_msgs::msg::Image::ConstSharedPtr &msg);
@@ -35,7 +35,7 @@ private:
 
 private:
     message_filters::Subscriber<sensor_msgs::msg::CameraInfo> caminfo_sub_;
-  //  message_filters::Subscriber<sensor_msgs::msg::Image> rgb_sub_, depth_sub_;
+   // message_filters::Subscriber<sensor_msgs::msg::CompressedImage> rgb_sub_, depth_sub_;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
     std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
 
@@ -45,16 +45,18 @@ private:
 
     std::shared_ptr<image_transport::ImageTransport> image_transport_;
     image_transport::SubscriberFilter rgb_sub_, depth_sub_ ;
+    //rclcpp::Subscription<sensor_msgs::msg::CompressedImage>::SharedPtr rgb_sub_, depth_sub_ ;
+
     std::shared_ptr<image_transport::Subscriber> mask_sub_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pcl_pub_;
 
     cv::Mat rgb_, depth_, mask_, depth_masked_;
     sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info_ = nullptr;
 
-    std::string camera_info_topic_, rgb_topic_, depth_topic_, mask_topic_, pcl_topic_, camera_frame_;
+  //  std::string camera_info_topic_, rgb_topic_, depth_topic_, mask_topic_, pcl_topic_, camera_frame_;
     std::mutex frame_mutex_;
     std::atomic<bool> frame_ready_{false};
-    uint depth_threshold_;
+   // uint depth_threshold_;
     Eigen::Isometry3d camera_transform_ ;
     bool has_camera_transform_ = false ;
 };

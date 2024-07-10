@@ -164,7 +164,7 @@ class GraspNetService(Node):
         super().__init__('graspnet_service_node')
         
         self.declare_parameter('checkpoint_path', os.path.join(get_package_share_directory("graspnet_service"), "weights/checkpoint-rs.tar")) 
-        self.declare_parameter('num_point', 175000)
+        self.declare_parameter('num_point', 75000)
         self.declare_parameter('num_view', 300)
         self.declare_parameter('collision_thresh', 0.01)
         self.declare_parameter('voxel_size', 0.005)

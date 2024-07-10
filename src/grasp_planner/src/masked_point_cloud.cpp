@@ -7,43 +7,47 @@
 #include <chrono>
 #include <Eigen/Geometry>
 
+using namespace std::literals::chrono_literals;
+using namespace std ;
+
 MaskedPointCloud::MaskedPointCloud(const rclcpp::NodeOptions &options) : rclcpp::Node("masked_point_cloud", options)
 {
-    camera_info_topic_ = declare_parameter("camera_info_topic", "/virtual_camera/color/camera_info");
-    rgb_topic_ = declare_parameter("rgb_topic", "/virtual_camera/color/image_raw");
-    depth_topic_ = declare_parameter("depth_topic", "/virtual_camera/depth/image_raw");
-    mask_topic_ = declare_parameter("mask_topic", "robot_mask/image_raw");
-    pcl_topic_ = declare_parameter("pcl_topic", "masked/points");
-    camera_frame_ = declare_parameter("camera_frame", "camera_color_optical_frame");
-    depth_threshold_ = declare_parameter("depth_threshold", 10);
+    declare_parameter("camera_info_topic", "/virtual_camera/color/camera_info");
+    declare_parameter("rgb_topic", "/virtual_camera/color/image_raw");
+    declare_parameter("depth_topic", "/virtual_camera/depth/image_raw");
+    declare_parameter("mask_topic", "robot_mask/image_raw");
+    declare_parameter("pcl_topic", "masked/points");
+    declare_parameter("camera_frame", "camera_color_optical_frame");
+    declare_parameter("depth_threshold", 10);
     declare_parameter("cutoff_volume", std::vector<double>{});
-    declare_parameter("image_transport", "raw");
+    declare_parameter("rgb_image_transport", "raw");
     declare_parameter("depth_image_transport", "raw");
+
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 }
-using namespace std::literals::chrono_literals;
+
 
 void MaskedPointCloud::setup()
 {
-    camera_info_topic_ = get_parameter("camera_info_topic").as_string();
-    rgb_topic_ = get_parameter("rgb_topic").as_string();
-    depth_topic_ = get_parameter("depth_topic").as_string();
-    camera_frame_ = get_parameter("camera_frame").as_string();
-
-    
-    // rgb_sub_.subscribe(this, rgb_topic_, rmw_qos_profile_sensor_data);
-    // depth_sub_.subscribe(this, depth_topic_, rmw_qos_profile_sensor_data);
-    caminfo_sub_.subscribe(this, camera_info_topic_, rmw_qos_profile_sensor_data);
+    string camera_info_topic = get_parameter("camera_info_topic").as_string();
+    string rgb_topic = get_parameter("rgb_topic").as_string();
+    string depth_topic = get_parameter("depth_topic").as_string();
+    string pcl_topic = get_parameter("pcl_topic").as_string();
+    string camera_frame = get_parameter("camera_frame").as_string();
+    string mask_topic = get_parameter("mask_topic").as_string();
+   
+  //   rgb_sub_.subscribe(this, rgb_topic_, rmw_qos_profile_sensor_data);
+  //   depth_sub_.subscribe(this, depth_topic_, rmw_qos_profile_sensor_data);
+    caminfo_sub_.subscribe(this, camera_info_topic, rmw_qos_profile_sensor_data);
 
     sync_.reset(new Synchronizer(SyncPolicy(10), rgb_sub_, depth_sub_, caminfo_sub_));
     sync_->registerCallback(std::bind(&MaskedPointCloud::frameCallback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
     image_transport_.reset(new image_transport::ImageTransport(shared_from_this()));
 
-    mask_sub_ = std::make_shared<image_transport::Subscriber>(image_transport_->subscribe(mask_topic_, 10,
+    mask_sub_ = std::make_shared<image_transport::Subscriber>(image_transport_->subscribe(mask_topic, 10,
                                                                                           std::bind(&MaskedPointCloud::maskCallback, this, std::placeholders::_1)));
-
     // parameter for depth_image_transport hint
     image_transport::TransportHints depth_hints(this, "raw", "depth_image_transport");
 
@@ -57,25 +61,24 @@ void MaskedPointCloud::setup()
             rclcpp::QosPolicyKind::History,
             rclcpp::QosPolicyKind::Reliability,
         }};
-
-    // depth image can use different transport.(e.g. compressedDepth)
+   
     depth_sub_.subscribe(
-        this, depth_topic_,
+        this, depth_topic,
         depth_hints.getTransport(), rmw_qos_profile_default, sub_opts);
 
-    // rgb uses normal ros transport hints.
-    image_transport::TransportHints hints(this);
+    image_transport::TransportHints hints(this, "raw", "rgb_image_transport");
+
     rgb_sub_.subscribe(
-        this, rgb_topic_,
+        this, rgb_topic,
         hints.getTransport(), rmw_qos_profile_default, sub_opts);
 
-    pcl_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>(pcl_topic_, 10);
+    pcl_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>(pcl_topic, 10);
 
     geometry_msgs::msg::TransformStamped t;
 
     try
     {
-        t = tf_buffer_->lookupTransform("world", camera_frame_, tf2::TimePointZero, tf2::Duration(10s));
+        t = tf_buffer_->lookupTransform("world", camera_frame, tf2::TimePointZero, tf2::Duration(10s));
         camera_transform_ = tf2::transformToEigen(t);
         has_camera_transform_ = true;
     }
@@ -83,7 +86,7 @@ void MaskedPointCloud::setup()
     {
         RCLCPP_INFO(
             this->get_logger(), "Could not transform %s to %s: %s",
-            camera_frame_.c_str(), "world", ex.what());
+            camera_frame.c_str(), "world", ex.what());
         return;
     }
 }
@@ -116,6 +119,8 @@ void MaskedPointCloud::frameCallback(sensor_msgs::msg::Image::ConstSharedPtr col
     std::lock_guard<std::mutex> frame_lock_(frame_mutex_);
 
     camera_info_ = camInfo;
+    
+    int depth_threshold = get_parameter("depth_threshold").as_int() ;
 
     try
     {
@@ -135,10 +140,10 @@ void MaskedPointCloud::frameCallback(sensor_msgs::msg::Image::ConstSharedPtr col
     {
         auto depthPtr = cv_bridge::toCvCopy(depthMsg, sensor_msgs::image_encodings::TYPE_16UC1);
 
-        if (depthMsg->encoding == sensor_msgs::image_encodings::TYPE_16UC1 || depthMsg->encoding == sensor_msgs::image_encodings::MONO16)
-        {
+     //   if (depthMsg->encoding == sensor_msgs::image_encodings::TYPE_16UC1 || depthMsg->encoding == sensor_msgs::image_encodings::MONO16)
+   //     {
             depth_ = depthPtr->image; // no conversion needed
-        }
+   //     }
     }
     catch (cv_bridge::Exception &e)
     {
@@ -150,7 +155,7 @@ void MaskedPointCloud::frameCallback(sensor_msgs::msg::Image::ConstSharedPtr col
 
     if (mask_.data != nullptr)
     {
-        maskDepth(depth_, mask_, depth_masked_, depth_threshold_);
+        maskDepth(depth_, mask_, depth_masked_, depth_threshold);
         publishCloud(depth_masked_, *camera_info_);
         frame_ready_ = true;
     }
