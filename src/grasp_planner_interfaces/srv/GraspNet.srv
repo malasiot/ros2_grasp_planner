@@ -1,8 +1,6 @@
-# An example of a trigger service.
-# This can be used for testing but a semantically meaningful
-# one should be created to be built upon.
 sensor_msgs/Image rgb
 sensor_msgs/Image depth
+sensor_msgs/Image mask
 sensor_msgs/CameraInfo camera_info
 ---
 grasp_planner_interfaces/Grasp[] grasps   # indicate successful run of triggered service

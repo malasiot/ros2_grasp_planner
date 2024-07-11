@@ -24,14 +24,14 @@ public:
 
     void setup();
 
-    std::tuple<cv::Mat, cv::Mat, sensor_msgs::msg::CameraInfo> getFrame();
+    std::tuple<cv::Mat, cv::Mat, cv::Mat, sensor_msgs::msg::CameraInfo> getFrame();
     bool hasFrame() const { return frame_ready_; }
     std::string getCameraFrame() const { return get_parameter("camera_frame").as_string() ; }
 
 private:
     void maskCallback(const sensor_msgs::msg::Image::ConstSharedPtr &msg);
     void frameCallback(sensor_msgs::msg::Image::ConstSharedPtr colorMsg, sensor_msgs::msg::Image::ConstSharedPtr depthMsg, sensor_msgs::msg::CameraInfo::ConstSharedPtr camInfo);
-    void publishCloud(const cv::Mat &depth, const sensor_msgs::msg::CameraInfo &caminfo);
+    cv::Mat publishCloud(const cv::Mat &depth, const sensor_msgs::msg::CameraInfo &caminfo);
 
 private:
     message_filters::Subscriber<sensor_msgs::msg::CameraInfo> caminfo_sub_;
@@ -50,7 +50,7 @@ private:
     std::shared_ptr<image_transport::Subscriber> mask_sub_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pcl_pub_;
 
-    cv::Mat rgb_, depth_, mask_, depth_masked_;
+    cv::Mat rgb_, depth_, mask_, depth_masked_, depth_mask_;
     sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info_ = nullptr;
 
   //  std::string camera_info_topic_, rgb_topic_, depth_topic_, mask_topic_, pcl_topic_, camera_frame_;

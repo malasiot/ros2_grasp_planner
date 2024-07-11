@@ -78,7 +78,7 @@ void GraspPlannerService::plan(const std::shared_ptr<GraspPlannerSrv::Request> r
 
     auto camera_frame = masked_point_cloud_->getCameraFrame() ;
 
-    auto [rgb, depth, caminfo] = masked_point_cloud_->getFrame() ; 
+    auto [rgb, depth, mask, caminfo] = masked_point_cloud_->getFrame() ; 
    
     auto graspnet_request = std::make_shared<GraspNet::Request>();
 
@@ -93,6 +93,9 @@ void GraspPlannerService::plan(const std::shared_ptr<GraspPlannerSrv::Request> r
    
     auto depth_bridge = std::make_shared<cv_bridge::CvImage>(header, sensor_msgs::image_encodings::MONO16, depth.clone());
     depth_bridge->toImageMsg(graspnet_request->depth);
+
+    auto mask_bridge = std::make_shared<cv_bridge::CvImage>(header, sensor_msgs::image_encodings::MONO8, mask);
+    mask_bridge->toImageMsg(graspnet_request->mask);
 
     graspnet_request->camera_info = caminfo ;
 

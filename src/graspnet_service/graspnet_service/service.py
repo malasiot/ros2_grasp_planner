@@ -92,24 +92,32 @@ class GraspNetService(Node):
         net.eval()
         return net
     
-    def get_and_process_data(self, color, depth, camera_info):
+    def get_and_process_data(self, color, depth, mask, camera_info):
         
         num_point = self.get_parameter('num_point').value 
         factor_depth = self.get_parameter('factor_depth').value 
         
-        # load data
-        #data_dir = "/workspaces/grasp_ws/src/graspnet_service/doc/example_data/"
-        #color = np.array(Image.open(os.path.join(data_dir, 'color.png')), dtype=np.float32) / 255.0
-        #depth = np.array(Image.open(os.path.join(data_dir, 'depth.png')))
         color = color.astype(np.float32)/255.0 ;
-        #workspace_mask = np.array(Image.open(os.path.join(data_dir, 'workspace_mask.png')))
+
+        height, width, _ = color.shape ;
+        
+        mask_path = os.path.join(get_package_share_directory("graspnet_service"), "data/mask.png")
+        if os.path.isfile(mask_path):
+            workspace_mask = np.array(Image.open(mask_path), dtype=bool)
+            assert workspace_mask.shape[0] == height and workspace_mask.shape[1] == width
+        else:
+            workspace_mask = np.ones((height, width), dtype=bool)
+
+        workspace_mask = np.array(mask, dtype=bool) | workspace_mask 
+
+   #     cc = np.array(workspace_mask.astype(int) * 255, dtype=np.uint8) ;
+   #     im = Image.fromarray(cc)
+   #     im.save("/workspaces/ros2_grasp_planner/mask.png")
+        
         #meta = scio.loadmat(os.path.join(data_dir, 'meta.mat'))
       
         k = camera_info.k.reshape(3, 3);
        
-        height, width, _ = color.shape ;
-        workspace_mask = np.ones((height, width), dtype=bool)
-        
         # generate cloud
         camera = CameraInfo(width, height, k[0][0], k[1][1], k[0][2], k[1][2], factor_depth)
         cloud = create_point_cloud_from_depth_image(depth, camera, organized=True)
@@ -169,18 +177,22 @@ class GraspNetService(Node):
         self.declare_parameter('collision_thresh', 0.01)
         self.declare_parameter('voxel_size', 0.005)
         self.declare_parameter('factor_depth', 4000.0)
-        self.declare_parameter('score_thresh', 0.1)
+        self.declare_parameter('score_thresh', 0.2)
     
         self.net = self.get_net()
         self.srv = self.create_service(GraspNetInterface, 'graspnet', self.graspnet_callback)
+
+      
+
 
     def graspnet_callback(self, request, response):
         bridge = CvBridge()
         rgb_image = bridge.imgmsg_to_cv2(request.rgb, desired_encoding='bgr8')
         depth_image = bridge.imgmsg_to_cv2(request.depth, desired_encoding='mono16')
+        mask_image = bridge.imgmsg_to_cv2(request.mask, desired_encoding='mono8')
         camera_info = request.camera_info
-        print(camera_info)
-        end_points, cloud = self.get_and_process_data(rgb_image, depth_image, camera_info)
+        
+        end_points, cloud = self.get_and_process_data(rgb_image, depth_image, mask_image, camera_info)
         gg = self.get_grasps(end_points)
         
         if self.get_parameter('collision_thresh').value > 0:

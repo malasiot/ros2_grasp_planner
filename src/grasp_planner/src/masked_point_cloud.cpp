@@ -6,6 +6,7 @@
 #include "tf2_eigen/tf2_eigen.hpp"
 #include <chrono>
 #include <Eigen/Geometry>
+#include <opencv2/opencv.hpp>
 
 using namespace std::literals::chrono_literals;
 using namespace std ;
@@ -127,6 +128,8 @@ void MaskedPointCloud::frameCallback(sensor_msgs::msg::Image::ConstSharedPtr col
         auto colorPtr = cv_bridge::toCvCopy(colorMsg, sensor_msgs::image_encodings::BGR8);
 
         rgb_ = colorPtr->image;
+
+        cv::imwrite("/workspaces/ros2_grasp_planner/rgb.png", rgb_) ;
     }
     catch (cv_bridge::Exception &e)
     {
@@ -156,13 +159,14 @@ void MaskedPointCloud::frameCallback(sensor_msgs::msg::Image::ConstSharedPtr col
     if (mask_.data != nullptr)
     {
         maskDepth(depth_, mask_, depth_masked_, depth_threshold);
-        publishCloud(depth_masked_, *camera_info_);
-        frame_ready_ = true;
+        depth_mask_ = publishCloud(depth_masked_, *camera_info_);
+        frame_ready_ = depth_mask_.data != nullptr ;
     }
 }
 
 static void convert(
     const cv::Mat &depth,
+    cv::Mat &mask,
     const image_geometry::PinholeCameraModel &model,
     const Eigen::Isometry3d &tr,
     sensor_msgs::msg::PointCloud2::SharedPtr &cloud_msg,
@@ -173,6 +177,8 @@ static void convert(
     // Use correct principal point from calibration
     float center_x = model.cx();
     float center_y = model.cy();
+
+    cv::Mat_<uchar> maskx(mask) ;
 
     // Combine unit conversion (if necessary) with scaling by focal length for computing (X,Y)
     double unit_scaling = 0.001f;
@@ -228,14 +234,18 @@ static void convert(
             *iter_x = tp.x();
             *iter_y = tp.y();
             *iter_z = tp.z();
+
+            maskx[v][u] = 255 ;
         }
     }
 }
 
-void MaskedPointCloud::publishCloud(const cv::Mat &dim, const sensor_msgs::msg::CameraInfo &caminfo)
+cv::Mat MaskedPointCloud::publishCloud(const cv::Mat &dim, const sensor_msgs::msg::CameraInfo &caminfo)
 {
+    
     if (pcl_pub_->get_subscription_count() > 0)
     {
+        cv::Mat mask(dim.size(), CV_8UC1, cv::Scalar(0)) ;
 
         sensor_msgs::msg::PointCloud2::SharedPtr cloud_msg =
             std::make_shared<sensor_msgs::msg::PointCloud2>();
@@ -252,23 +262,27 @@ void MaskedPointCloud::publishCloud(const cv::Mat &dim, const sensor_msgs::msg::
         sensor_msgs::PointCloud2Modifier pcd_modifier(*cloud_msg);
         pcd_modifier.setPointCloud2FieldsByString(1, "xyz");
 
-        // g_cam_info here is a sensor_msg::msg::CameraInfo::SharedPtr,
-        // which we get from the depth_camera_info topic.
+        
         image_geometry::PinholeCameraModel model;
         model.fromCameraInfo(caminfo);
 
         auto cutoff = get_parameter("cutoff_volume").as_double_array();
-        convert(dim, model, camera_transform_, cloud_msg, cutoff);
+        convert(dim, mask, model, camera_transform_, cloud_msg, cutoff);
+        
 
         pcl_pub_->publish(*cloud_msg);
+
+        return mask ;
     }
+
+    return {} ;
 }
 
-std::tuple<cv::Mat, cv::Mat, sensor_msgs::msg::CameraInfo> MaskedPointCloud::getFrame()
+std::tuple<cv::Mat, cv::Mat, cv::Mat, sensor_msgs::msg::CameraInfo> MaskedPointCloud::getFrame()
 {
     std::lock_guard<std::mutex> frame_lock_(frame_mutex_);
 
-    return {rgb_.clone(), depth_masked_.clone(), *camera_info_};
+    return {rgb_.clone(), depth_.clone(), depth_mask_.clone(), *camera_info_};
 }
 
 void MaskedPointCloud::maskCallback(const sensor_msgs::msg::Image::ConstSharedPtr &msg)
