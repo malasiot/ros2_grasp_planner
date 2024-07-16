@@ -109,13 +109,7 @@ class GraspNetService(Node):
             workspace_mask = np.ones((height, width), dtype=bool)
 
         workspace_mask = np.array(mask, dtype=bool) | workspace_mask 
-
-   #     cc = np.array(workspace_mask.astype(int) * 255, dtype=np.uint8) ;
-   #     im = Image.fromarray(cc)
-   #     im.save("/workspaces/ros2_grasp_planner/mask.png")
-        
-        #meta = scio.loadmat(os.path.join(data_dir, 'meta.mat'))
-      
+   
         k = camera_info.k.reshape(3, 3);
        
         # generate cloud
@@ -176,7 +170,7 @@ class GraspNetService(Node):
         self.declare_parameter('num_view', 300)
         self.declare_parameter('collision_thresh', 0.01)
         self.declare_parameter('voxel_size', 0.005)
-        self.declare_parameter('factor_depth', 4000.0)
+        self.declare_parameter('factor_depth', 3500.0)
         self.declare_parameter('score_thresh', 0.2)
     
         self.net = self.get_net()

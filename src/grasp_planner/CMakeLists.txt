@@ -55,7 +55,26 @@ ament_target_dependencies(grasp_planner_service
 )
 target_link_libraries(grasp_planner_service ${OpenCV_LIBS} Eigen3::Eigen OpenMP::OpenMP_CXX)
 
-install(TARGETS grasp_planner_service
+
+add_executable(reachability
+    src/reachability.cpp 
+    src/reachability_node.hpp
+    src/reachability_node.cpp
+    src/moveit_ik.cpp 
+    src/moveit_ik.hpp
+)
+
+target_compile_features(reachability PUBLIC cxx_std_17)
+ament_target_dependencies(reachability
+  rclcpp  std_msgs sensor_msgs geometry_msgs 
+  Eigen3
+  moveit_ros_planning_interface
+  grasp_planner_interfaces
+)
+
+
+
+install(TARGETS grasp_planner_service reachability
   DESTINATION lib/${PROJECT_NAME})
 
 install(

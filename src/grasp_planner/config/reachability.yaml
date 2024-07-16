@@ -1,0 +1,6 @@
+reachability_node:
+  ros__parameters:    
+    volume: [0.1, 1.2, -0.8, 0.8, 0.02, 0.45]
+
+    
+    

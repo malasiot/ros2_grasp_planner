@@ -12,7 +12,7 @@ masked_point_cloud:
     camera_frame: camera_213322072140_color_optical_frame
     rgb_image_transport: compressed
     depth_image_transport: compressedDepth
-    cutoff_volume: [0.5, 1.3, -0.6, 0.6, -0.02, 0.35]
+    cutoff_volume: [0.3, 1.2, -0.6, 0.6, -0.02, 0.35]
 
     
     

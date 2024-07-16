@@ -10,7 +10,7 @@ masked_point_cloud:
     depth_topic: /camera/camera_213322072140/aligned_depth_to_color/image_raw
     camera_info_topic: /camera/camera_213322072140/color/camera_info
     camera_frame: camera_213322072140_color_optical_frame
-    cutoff_volume: [0.6, 1.3, -0.6, 0.6, -0.02, 0.35]
+    cutoff_volume: [0.4, 1.3, -0.6, 0.6, -0.02, 0.35]
 
     
     
