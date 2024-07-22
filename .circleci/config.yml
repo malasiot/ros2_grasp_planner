@@ -8,7 +8,7 @@ parameters:
 jobs:
   build:
     docker:
-      - image: malasiot/sestosenso-certh-grasp-planner:latest
+      - image: malasiot/sestosenso-certh-grasp-planner:v1
     resource_class: large
     steps:
       - checkout

@@ -79,6 +79,10 @@ void GraspPlannerService::plan(const std::shared_ptr<GraspPlannerSrv::Request> r
     auto camera_frame = masked_point_cloud_->getCameraFrame() ;
 
     auto [rgb, depth, mask, caminfo] = masked_point_cloud_->getFrame() ; 
+RCLCPP_INFO(this->get_logger(), "saving images");
+    cv::imwrite("/workspaces/ros2_grasp_planner/rgb.png", rgb) ;
+    cv::imwrite("/workspaces/ros2_grasp_planner/depth.png", depth) ;
+    cv::imwrite("/workspaces/ros2_grasp_planner/mask.png", mask) ;
    
     auto graspnet_request = std::make_shared<GraspNet::Request>();
 
@@ -122,6 +126,9 @@ void GraspPlannerService::plan(const std::shared_ptr<GraspPlannerSrv::Request> r
         geometry_msgs::msg::TransformStamped tr  = tf_buffer->lookupTransform(
                      "world", camera_frame, tf2::TimePointZero, tf2::durationFromSec(5));
         camera_tr = tf2::transformToEigen(tr);
+
+        ofstream strm("/workspaces/ros2_grasp_planner/camera.txt") ;
+        strm << camera_tr.matrix() << endl ;
  
     } catch ( tf2::TransformException &e ) {
         RCLCPP_ERROR(get_logger(), "Failed to read transform between 'world' and '%s': %s", camera_frame.c_str(), e.what()) ;

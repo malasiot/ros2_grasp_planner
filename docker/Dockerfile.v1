@@ -1,0 +1,10 @@
+# docker build -t malasiot/sestosenso-certh-grasp-planner:v1 -f Dockerfile.v1 ../src/sam/
+FROM malasiot/sestosenso-certh-grasp-planner:base
+
+RUN mkdir "/home/ros/.gdb-eigen/" ; touch "/home/ros/.gdb-eigen/__init__.py"; wget -P "/home/ros/.gdb-eigen/" "https://gitlab.com/libeigen/eigen/-/raw/master/debug/gdb/printers.py"; echo 'python\nimport sys\nsys.path.insert(0, "/home/ros/.gdb-eigen/")\nfrom printers import register_eigen_printers\nregister_eigen_printers(None)\nend' > /home/ros/.gdbinit
+RUN apt-get update ; apt-get install -y ros-humble-image-transport-plugins
+
+RUN mkdir model ; wget -O ./model/sam_vit_h_4b8939.pth https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth --no-check-certificate
+COPY requirements.txt .
+RUN pip3 install -r ./requirements.txt
+

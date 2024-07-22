@@ -20,6 +20,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/GraspNet.srv"
   "srv/GraspPlanner.srv"
   "srv/Reachability.srv"
+  "srv/Segmentation.srv"
   "msg/Grasp.msg"
   DEPENDENCIES sensor_msgs geometry_msgs
 )

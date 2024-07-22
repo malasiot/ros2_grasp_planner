@@ -1,0 +1,18 @@
+segmentation_service:
+  ros__parameters:
+
+    model_type: "vit_h"
+    checkpoint: "./model/sam_vit_h_4b8939.pth"
+    points_per_side: 50
+    points_per_batch: None
+    pred_iou_thresh: 0.92
+    stability_score_thresh: 0.9
+    stability_score_offset: None
+    box_nms_thresh: 0.2
+    crop_n_layers: None
+    crop_nms_thresh: 0.8
+    crop_overlap_ratio: None
+    crop_n_points_downscale_factor: None
+    min_mask_region_area: 8000
+    device: "cuda"
+    output_mode: "coco_rle"

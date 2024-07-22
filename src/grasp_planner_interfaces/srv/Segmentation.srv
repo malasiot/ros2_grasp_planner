@@ -1,0 +1,6 @@
+sensor_msgs/Image image            # Image to be segmented
+string input_string                # String representing the image
+---
+string frame_id
+sensor_msgs/Image segmented_image #segmented image
+float32[] scores
