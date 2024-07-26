@@ -18,6 +18,7 @@ find_package(sensor_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/GraspNet.srv"
+  "srv/GraspBox.srv"
   "srv/GraspPlanner.srv"
   "srv/Reachability.srv"
   "srv/Segmentation.srv"

@@ -8,3 +8,5 @@ RUN mkdir model ; wget -O ./model/sam_vit_h_4b8939.pth https://dl.fbaipublicfile
 COPY requirements.txt .
 RUN pip3 install -r ./requirements.txt
 
+RUN git clone 'https://github.com/malasiot/cvx.git';cd cvx; mkdir build; cd build; cmake ..; make -j8 install ; cd ../.. ; rm -rf cvx ;
+

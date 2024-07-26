@@ -30,6 +30,34 @@
     ]
   },
   {
+    "name": "Launch graspbox service",
+    "type": "cppdbg",
+    "request": "launch",
+    "program": "${workspaceFolder}/build/grasp_box/grasp_box_service",
+   
+    "args": ["--ros-args", "--params-file", "${workspaceFolder}/install/share/iiwa_description/moveit2/dual_kinematics.yaml",
+    "--params-file", "${workspaceFolder}/install/share/grasp_planner/config/params-rs2.yaml" ],
+    "stopAtEntry": false,
+    "cwd": "${workspaceFolder}/",
+    "environment": [
+      
+    ],
+    "externalConsole": false,
+    "MIMode": "gdb",
+    "setupCommands": [
+        {
+            "description": "Enable pretty-printing for gdb",
+            "text": "-enable-pretty-printing",
+            "ignoreFailures": true
+        },
+        {
+            "description": "Set Disassembly Flavor to Intel",
+            "text": "-gdb-set disassembly-flavor intel",
+            "ignoreFailures": true
+        }
+    ]
+  }
+  {
     "name": "Launch reachability",
     "type": "cppdbg",
     "request": "launch",
@@ -58,13 +86,13 @@
     ]
   },
   {
-    "name": "Launch mask_node",
+    "name": "Launch grasp_box",
     "type": "cppdbg",
     "request": "launch",
-    "program": "${workspaceFolder}/build/ros2_virtual_camera/robot_mask",
+    "program": "${workspaceFolder}/build/grasp_box/test_box_detector",
    
-    "args": ["robot.xml", "--ros-args", "-p", "camera_frame:=camera_213322072140_color_optical_frame" ],
-    "stopAtEntry": true,
+    "args": [ "depth.png", "segmented_images/rgb.png", "mask.png"],
+    "stopAtEntry": false,
     "cwd": "${workspaceFolder}",
     "environment": [
       

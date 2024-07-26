@@ -20,7 +20,6 @@ void MoveGroupInterfaceNode::setup()
     //  planning_scene_monitor_->startWorldGeometryMonitor() ;
     planning_scene_monitor_->startSceneMonitor("/monitored_planning_scene");
     robot_state_publisher_ = create_publisher<moveit_msgs::msg::DisplayRobotState>("display_robot_state", 10);
-
 }
 
 static Eigen::Isometry3d poseFromEigen(const Vector3d &c, const Quaterniond &r)
@@ -62,14 +61,15 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
         Eigen::Vector3d c(trv.x, trv.y, trv.z);
         Eigen::Quaterniond rot(rotv.w, rotv.x, rotv.y, rotv.z);
         Eigen::Matrix3d m = rot.toRotationMatrix();
-       
+
         auto approach = m.col(0).eval();
         auto binormal = m.col(1).eval();
-        auto xc = m.col(2).eval() ;
+        auto xc = m.col(2).eval();
 
-        if (binormal.y() < 0) {
+        if (binormal.y() < 0)
+        {
             binormal = -binormal;
-            xc = -xc ;
+            xc = -xc;
         }
         double hw = 0.5 * grasp.width;
         double hand_depth = grasp.depth;
@@ -80,7 +80,7 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
         Matrix3d trot;
         trot.col(0) = approach;
         trot.col(1) = binormal;
-        trot.col(2) = xc ;
+        trot.col(2) = xc;
 
         Quaterniond qrot(trot);
 
@@ -124,7 +124,8 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
             continue;
         auto [rs, manip] = solver_right_arm.solveIK(poseFromEigen(test.r_, test.rot_));
 
-        if (!rs.empty())  {
+        if (!rs.empty())
+        {
             test.rs_ = rs;
             test.rm_ = manip;
         }
@@ -134,7 +135,8 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
 
     std::set<int> filtered_set;
 
-    for (auto &test : tests)  {
+    for (auto &test : tests)
+    {
         if (test.ls_.empty() || test.rs_.empty())
             continue;
 
@@ -157,33 +159,25 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
     {
         filtered.emplace_back(candidates[idx]);
     }
+}
 
-    std::sort(result.begin(), result.end(), [](const GraspCandidate &a, const GraspCandidate &b)
-              {
-                  double ma = a.lm_ + a.rm_, mb = b.lm_ + b.rm_;
+void MoveGroupInterfaceNode::visualizeResult(const GraspCandidate &r)
+{
+    planning_scene_monitor::LockedPlanningSceneRO planning_scene(planning_scene_monitor_);
+    moveit::core::RobotState state(planning_scene->getRobotModel());
 
-                  return ma > mb; // sort based on manipulability
-              });
+    auto jml = state.getJointModelGroup("iiwa_left_arm");
+    auto rml = state.getJointModelGroup("iiwa_right_arm");
 
-    if (!result.empty())
-    {
-        const auto &r = result[0];
+    state.setJointGroupPositions(jml, r.jl_);
+    state.setJointGroupPositions(rml, r.jr_);
+    state.update();
 
-        moveit::core::RobotState state(planning_scene->getRobotModel());
+    moveit_msgs::msg::DisplayRobotState drs;
 
-        auto jml = state.getJointModelGroup("iiwa_left_arm");
-        auto rml = state.getJointModelGroup("iiwa_right_arm");
+    moveit::core::robotStateToRobotStateMsg(state, drs.state);
 
-        state.setJointGroupPositions(jml, r.jl_);
-        state.setJointGroupPositions(rml, r.jr_);
-        state.update();
-
-        moveit_msgs::msg::DisplayRobotState drs;
-
-        moveit::core::robotStateToRobotStateMsg(state, drs.state);
-
-        robot_state_publisher_->publish(drs);
-    }
+    robot_state_publisher_->publish(drs);
 }
 
 bool MoveGroupInterfaceNode::jointStateToRobotState(const sensor_msgs::msg::JointState &joint_state, moveit::core::RobotState &state)
@@ -213,13 +207,15 @@ void MoveGroupInterfaceNode::computeMotionPlans(std::vector<GraspCandidate> &can
     move_group_interface.setMaxVelocityScalingFactor(1);
     move_group_interface.setNumPlanningAttempts(10);
 
-    if ( start_joint_state.position.empty() ) 
-        move_group_interface.setStartStateToCurrentState() ;
-    else {
+    if (start_joint_state.position.empty())
+        move_group_interface.setStartStateToCurrentState();
+    else
+    {
         moveit::core::RobotState start_state(move_group_interface.getRobotModel());
-        if ( !jointStateToRobotState(start_joint_state, start_state) ) return ;
+        if (!jointStateToRobotState(start_joint_state, start_state))
+            return;
 
-        move_group_interface.setStartState(start_state) ;
+        move_group_interface.setStartState(start_state);
     }
 
     uint count = 0;
@@ -237,8 +233,9 @@ void MoveGroupInterfaceNode::computeMotionPlans(std::vector<GraspCandidate> &can
         move_group_interface.setJointValueTarget(state);
 
         moveit::planning_interface::MoveGroupInterface::Plan plan;
-        
-        if (static_cast<bool>(move_group_interface.plan(plan)))  {
+
+        if (static_cast<bool>(move_group_interface.plan(plan)))
+        {
             grasp.start_state_ = plan.start_state_;
             grasp.trajectory_ = plan.trajectory_;
 

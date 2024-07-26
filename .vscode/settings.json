@@ -86,7 +86,8 @@
         "typeinfo": "cpp",
         "variant": "cpp",
         "any": "cpp",
-        "regex": "cpp"
+        "regex": "cpp",
+        "hash_map": "cpp"
     },
     "remote.autoForwardPortsFallback": 0,
     "ros.distro": "humble",

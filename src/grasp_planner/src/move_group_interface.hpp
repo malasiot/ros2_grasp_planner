@@ -38,9 +38,11 @@ public:
         std::vector<GraspCandidate> &res) ;
 
     void computeMotionPlans(std::vector<GraspCandidate> &candidates, const sensor_msgs::msg::JointState &start_state, uint max_plans) ;
+    void visualizeResult(const GraspCandidate &r);
 private:
 
     bool jointStateToRobotState(const sensor_msgs::msg::JointState &joint_state, moveit::core::RobotState &state);
+    
 
     moveit::core::RobotModelConstPtr model_ ;
     planning_scene::PlanningScenePtr scene_ ;

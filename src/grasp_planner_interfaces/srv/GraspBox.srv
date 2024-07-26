@@ -1,0 +1,7 @@
+sensor_msgs/Image rgb
+sensor_msgs/Image depth
+sensor_msgs/Image mask
+sensor_msgs/CameraInfo camera_info
+geometry_msgs/Transform camera_pose
+---
+grasp_planner_interfaces/Grasp[] grasps   
