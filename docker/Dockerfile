@@ -20,3 +20,7 @@ RUN vcs import src < src/grasp_planner/grasp_planner.repos && vcs import src < s
 RUN rosdep update && rosdep install --from-paths src -y --ignore-src 
 
 RUN . /opt/ros/${ROS_DISTRO}/setup.sh && colcon build --symlink-install --merge-install
+
+COPY /docker/entrypoint.sh /
+  
+ENTRYPOINT [ "/entrypoint.sh" ]
