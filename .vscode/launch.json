@@ -56,7 +56,7 @@
             "ignoreFailures": true
         }
     ]
-  }
+  },
   {
     "name": "Launch reachability",
     "type": "cppdbg",

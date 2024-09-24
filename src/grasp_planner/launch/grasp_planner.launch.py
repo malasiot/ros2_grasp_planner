@@ -84,7 +84,7 @@ def generate_launch_description():
     namespace = LaunchConfiguration('namespace')
  #   camera_frame = LaunchConfiguration('camera_frame')
 
-    camera_frame = "camera_213322072140_color_optical_frame"
+    camera_frame = "camera_213322070245_color_optical_frame"
     
     # Get URDF via xacro
     robot_description_content = Command(
@@ -142,15 +142,14 @@ def generate_launch_description():
     grasp_planning_config = os.path.join(
             package_share_directory,
             'config',
-            'params-rs2.yaml'
+            'params-rs.yaml'
     )        
 
     camera_tf_node = Node(
         package = "tf2_ros", 
         executable = "static_transform_publisher",
-        arguments = [ "--x",  "-0.030259363850628995", "--y", "0.3985303170963656", "--z",  "1.0012964230101555",
-                     "--qw", "-0.24674339982780538", "--qx",  "0.68689410475534141", "--qy",  "-0.63356047244717506", "--qz", "0.25670082050177889",
-                      "--frame-id", "iiwa_left_base", "--child-frame-id", "camera_213322072140_color_optical_frame" 
+        arguments = [ "-0.221", "0.026", "1.026", "-2.436", "-0.007", "-1.575",
+                       "iiwa_left_base",  "camera_213322070245_color_optical_frame" 
                     ]
     )
     
@@ -167,10 +166,10 @@ def generate_launch_description():
     
     nodes = [
         robot_launch,
-        camera_tf_node,
-        robot_mask_node,
-        graspnet_service_node,
-        grasp_planning_node
+ #       camera_tf_node,
+ #       robot_mask_node,
+ #       graspnet_service_node,
+ #       grasp_planning_node
     ]
 
     return LaunchDescription(declared_arguments + nodes)
