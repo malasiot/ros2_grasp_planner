@@ -3,7 +3,10 @@
 #include <moveit/planning_scene_monitor/planning_scene_monitor.h>
 #include <moveit/kinematics_metrics/kinematics_metrics.h>
 
+#include <iostream>
+
 using namespace std::placeholders;
+using namespace std ;
 
 MoveItIKSolver::MoveItIKSolver(const planning_scene::PlanningSceneConstPtr &scene, 
     const std::string &planning_group,  const std::string &ee_link, double dist_threshold)
@@ -52,6 +55,8 @@ std::tuple<std::vector<double>, double> MoveItIKSolver::solveIK(const Eigen::Iso
 
     kinematics::KinematicsQueryOptions options ;
     options.discretization_method = kinematics::DiscretizationMethods::SOME_DISCRETIZED ;
+    options.return_approximate_solution = false ;
+
     if ( state.setFromIK(jmg, target, ee_link_, 0.05,
                         std::bind(&MoveItIKSolver::isIKSolutionValid, this, std::placeholders::_1, std::placeholders::_2,
                                   std::placeholders::_3), options)) {

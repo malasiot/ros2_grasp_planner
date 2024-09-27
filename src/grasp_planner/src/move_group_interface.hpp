@@ -33,7 +33,7 @@ public:
     void setup() ;
 
     void filterGrasps(const std::vector<grasp_planner_interfaces::msg::Grasp> &candidates, 
-        float offset, float finger_width, float clearance_thresh, 
+        float offset, float finger_width, float clearance_thresh, bool tactile,
         std::vector<grasp_planner_interfaces::msg::Grasp> &filtered,
         std::vector<GraspCandidate> &res) ;
 

@@ -1,7 +1,7 @@
 --extra-index-url https://download.pytorch.org/whl/cu118
 torchvision
 torch==2.0.1
-numpy
+numpy==1.26.4
 git+https://github.com/facebookresearch/segment-anything.git
 opencv-python 
 pycocotools

@@ -29,6 +29,7 @@ import argparse
 import importlib
 import scipy.io as scio
 from PIL import Image
+import cv2 ;
 
 import torch
 from graspnetAPI import GraspGroup, Grasp
@@ -106,10 +107,11 @@ class GraspNetService(Node):
             workspace_mask = np.array(Image.open(mask_path), dtype=bool)
             assert workspace_mask.shape[0] == height and workspace_mask.shape[1] == width
         else:
-            workspace_mask = np.ones((height, width), dtype=bool)
+            workspace_mask = np.zeros((height, width), dtype=bool)
 
         workspace_mask = np.array(mask, dtype=bool) | workspace_mask 
-   
+
+        
         k = camera_info.k.reshape(3, 3);
        
         # generate cloud
@@ -121,6 +123,8 @@ class GraspNetService(Node):
         cloud_masked = cloud[mask]
         color_masked = color[mask]
 
+        cv2.imwrite("workspace.png", (mask*255).astype(np.uint8)) ;
+   
         # sample points
         if len(cloud_masked) >= num_point:
             idxs = np.random.choice(len(cloud_masked), num_point, replace=False)
@@ -168,10 +172,10 @@ class GraspNetService(Node):
         self.declare_parameter('checkpoint_path', os.path.join(get_package_share_directory("graspnet_service"), "weights/checkpoint-rs.tar")) 
         self.declare_parameter('num_point', 75000)
         self.declare_parameter('num_view', 300)
-        self.declare_parameter('collision_thresh', 0.01)
+        self.declare_parameter('collision_thresh', 0.05)
         self.declare_parameter('voxel_size', 0.005)
-        self.declare_parameter('factor_depth', 3500.0)
-        self.declare_parameter('score_thresh', 0.2)
+        self.declare_parameter('factor_depth', 4500.0)
+        self.declare_parameter('score_thresh', 0.35)
     
         self.net = self.get_net()
         self.srv = self.create_service(GraspNetInterface, 'graspnet', self.graspnet_callback)

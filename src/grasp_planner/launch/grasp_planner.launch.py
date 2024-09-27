@@ -167,9 +167,9 @@ def generate_launch_description():
     nodes = [
         robot_launch,
  #       camera_tf_node,
- #       robot_mask_node,
- #       graspnet_service_node,
- #       grasp_planning_node
+        robot_mask_node,
+        graspnet_service_node,
+        grasp_planning_node
     ]
 
     return LaunchDescription(declared_arguments + nodes)

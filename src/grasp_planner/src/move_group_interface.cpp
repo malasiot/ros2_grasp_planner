@@ -41,14 +41,20 @@ struct ReachTest
 };
 
 void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interfaces::msg::Grasp> &candidates,
-                                          float depth_offset, float finger_width, float dist_thresh,
+                                          float depth_offset, float finger_width, float dist_thresh, bool tactile,
                                           std::vector<grasp_planner_interfaces::msg::Grasp> &filtered,
                                           std::vector<GraspCandidate> &result)
 {
     planning_scene_monitor::LockedPlanningSceneRO planning_scene(planning_scene_monitor_);
 
-    MoveItIKSolver solver_left_arm(planning_scene, "iiwa_left_arm", "iiwa_left_ee", dist_thresh);
-    MoveItIKSolver solver_right_arm(planning_scene, "iiwa_right_arm", "iiwa_right_ee", dist_thresh);
+ //   MoveItIKSolver solver_left_arm(planning_scene, "iiwa_left_arm", "iiwa_left_ee", dist_thresh);
+ //   MoveItIKSolver solver_right_arm(planning_scene, "iiwa_right_arm", "iiwa_right_ee", dist_thresh);
+
+    string prefix = ( tactile ) ? "_tactile" : "" ;
+
+    MoveItIKSolver solver_left_arm(planning_scene, "iiwa_left_arm" + prefix, "iiwa_left" + prefix + "_ee", dist_thresh);
+    MoveItIKSolver solver_right_arm(planning_scene, "iiwa_right_arm" + prefix, "iiwa_right" + prefix + "_ee", dist_thresh);
+
 
     std::vector<ReachTest> tests;
 
@@ -100,6 +106,9 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
     auto rml = state.getJointModelGroup("iiwa_right_arm");
     state.setToDefaultValues("iiwa_right_arm", "upright");
 
+#ifdef DEBUG
+cout << "left arm" << endl ;
+#endif
 #pragma omp parallel for
     for (size_t i = 0; i < tests.size(); i++)
     {
@@ -108,6 +117,11 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
 
         if (!ls.empty())
         {
+            if ( tactile ) ls.push_back(0) ;
+#ifdef DEBUG
+            for(int j=0 ; j<ls.size() ; j++ ) cout << ls[j] * 180/M_PI << endl ;
+            cout << endl ;
+#endif            
             test.ls_ = ls;
             test.lm_ = manip;
         }
@@ -116,6 +130,11 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
     // right hand reachability
 
     state.setToDefaultValues("iiwa_left_arm", "upright");
+
+#ifdef DEBUG
+    cout << "right arm" << endl ;
+#endif
+
 #pragma omp parallel for
     for (size_t i = 0; i < tests.size(); i++)
     {
@@ -126,6 +145,11 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
 
         if (!rs.empty())
         {
+            if ( tactile ) rs.push_back(M_PI) ;
+#ifdef DEBUG            
+            for(int j=0 ; j<rs.size() ; j++ ) cout << rs[j] * 180/M_PI << endl ;
+            cout << endl ;
+#endif
             test.rs_ = rs;
             test.rm_ = manip;
         }

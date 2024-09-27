@@ -63,6 +63,8 @@ void ReachabilityNode::doTest()
                 m << 0, 0, -1,
                     0, -1, 0,
                     -1, 0, 0;
+
+                    m.setIdentity();
                 Quaterniond qrot(m);
                 auto [ls, manip] = solver_left_arm.solveIK(poseFromEigen(c, qrot));
 
@@ -95,6 +97,7 @@ void ReachabilityNode::doTest()
                 m << 0, 0, -1,
                     0, -1, 0,
                     -1, 0, 0;
+                    m.setIdentity();
                 Quaterniond qrot(m);
                 auto [rs, manip] = solver_right_arm.solveIK(poseFromEigen(c, qrot));
 

@@ -129,7 +129,7 @@ rclcpp::Client<GraspPlannerService::GraspBox>::FutureAndRequestId GraspPlannerSe
 
 void GraspPlannerService::plan(const std::shared_ptr<GraspPlannerSrv::Request> request, std::shared_ptr<GraspPlannerSrv::Response> response)
 {
-
+    bool tactile = request->end_effector == GraspPlannerSrv::Request::GRASP_WITH_TACTILE ;
     auto tf_buffer = std::make_unique<tf2_ros::Buffer>(get_clock());
     auto tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
 
@@ -236,7 +236,20 @@ void GraspPlannerService::plan(const std::shared_ptr<GraspPlannerSrv::Request> r
         // transform to world coordinate frame
         convertToWorldCoordinates(camera_tr, resp_gnet->grasps);
 
+#ifdef DEBUG
+        resp_gnet->grasps.clear() ;
+
+        grasp_planner_interfaces::msg::Grasp g ;
+        g.depth = 0.05 ;
+        g.height = 0.05 ;
+        g.score = 0.5;
+        g.width = 0.3 ;
+        g.translation.x = 0.75 ;
+        g.translation.y = 0 ;
+        g.translation.z = 0.5 ;
+        resp_gnet->grasps.emplace_back(g);
         // publish markers
+#endif
         grasps_rviz_pub_->publish(convertToVisualGraspMsg(resp_gnet->grasps, 0.05, 0.01, 0.01, "world", {0, 0, 1.0f, 0.5f}, "candidates:graspnet"));
 
 #ifdef USE_GRASP_BOX_SRV
@@ -256,7 +269,7 @@ void GraspPlannerService::plan(const std::shared_ptr<GraspPlannerSrv::Request> r
         size_t max_results = get_parameter("max_results").as_int();
         double clearance = get_parameter("clearance").as_double();
 
-        move_group_interface_->filterGrasps(resp_gnet->grasps, gripper_offset, finger_width, clearance, grasps_filtered_gnet, results_gnet);
+        move_group_interface_->filterGrasps(resp_gnet->grasps, gripper_offset, finger_width, clearance, tactile, grasps_filtered_gnet, results_gnet);
         grasps_rviz_pub_->publish(convertToVisualGraspMsg(grasps_filtered_gnet, 0.05, 0.01, 0.01, "world", {1, 0, 0.0f, 0.5f}, "filtered:graspnet"));
 #ifdef USE_GRASP_BOX_SRV
         move_group_interface_->filterGrasps(resp_gbox->grasps, gripper_offset, finger_width, clearance, grasps_filtered_gbox, results_gbox);
