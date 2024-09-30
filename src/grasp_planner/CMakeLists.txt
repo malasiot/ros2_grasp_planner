@@ -20,6 +20,7 @@ find_package(moveit_ros_planning_interface REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(image_geometry REQUIRED)
 find_package(OpenMP REQUIRED)
+find_package(cvx REQUIRED)
 
 
 add_executable(grasp_planner_service
@@ -43,7 +44,7 @@ target_compile_features(grasp_planner_service PUBLIC cxx_std_17)  # Require C++1
 
 ament_target_dependencies(grasp_planner_service
   rclcpp  std_msgs sensor_msgs geometry_msgs 
-  cv_bridge Eigen3
+  cv_bridge Eigen3 cvx
   visualization_msgs
   image_transport
   image_geometry
@@ -53,7 +54,7 @@ ament_target_dependencies(grasp_planner_service
   grasp_planner_msgs
   grasp_planner_interfaces
 )
-target_link_libraries(grasp_planner_service ${OpenCV_LIBS} Eigen3::Eigen OpenMP::OpenMP_CXX)
+target_link_libraries(grasp_planner_service ${OpenCV_LIBS} Eigen3::Eigen cvx OpenMP::OpenMP_CXX)
 
 
 add_executable(reachability

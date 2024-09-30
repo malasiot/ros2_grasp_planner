@@ -26,14 +26,20 @@ struct GraspCandidate {
 
 };
 
+struct GraspCandidateFilterParams {
+    double offset_, finger_width_, clearence_thresh_ ;
+    std::vector<double> tol_6dof_, tol_7dof_ ;
+    uint n_attempts_6dof_, n_attempts_7dof_ ;
+};
+
 class MoveGroupInterfaceNode: public rclcpp::Node {
 public:
     MoveGroupInterfaceNode(const rclcpp::NodeOptions &options = rclcpp::NodeOptions()) ;
 
     void setup() ;
 
-    void filterGrasps(const std::vector<grasp_planner_interfaces::msg::Grasp> &candidates, 
-        float offset, float finger_width, float clearance_thresh, bool tactile,
+    void filterGrasps(const std::vector<grasp_planner_interfaces::msg::Grasp> &candidates, const GraspCandidateFilterParams &params,
+        bool tactile,
         std::vector<grasp_planner_interfaces::msg::Grasp> &filtered,
         std::vector<GraspCandidate> &res) ;
 

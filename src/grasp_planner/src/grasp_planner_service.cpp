@@ -22,6 +22,11 @@ GraspPlannerService::GraspPlannerService(const rclcpp::NodeOptions &options) : r
     declare_parameter("finger_width", 0.01f);
     declare_parameter("max_results", 3);
     declare_parameter("clearance", 0.01f);
+    declare_parameter("n_attempts_6dof", 15);
+    declare_parameter("n_attempts_7dof", 1);
+    declare_parameter("tol_6dof", std::vector<double>{0.02, 0.02, 0.02, 0.05, 0.2, 0.05});
+    declare_parameter("tol_7dof", std::vector<double>{0.01, 0.01, 0.01, 0.01, 0.01, 0.01});
+    
 
     grasps_rviz_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>(viz_topic, 10);
 
@@ -263,13 +268,19 @@ void GraspPlannerService::plan(const std::shared_ptr<GraspPlannerSrv::Request> r
         RCLCPP_INFO(get_logger(), "Filtering non-reachable candidates");
         vector<grasp_planner_interfaces::msg::Grasp> grasps_filtered_gnet, grasps_filtered_gbox;
         vector<GraspCandidate> results_gnet, results_gbox, results;
-
-        double gripper_offset = get_parameter("gripper_offset").as_double();
-        double finger_width = get_parameter("finger_width").as_double();
+        
         size_t max_results = get_parameter("max_results").as_int();
-        double clearance = get_parameter("clearance").as_double();
 
-        move_group_interface_->filterGrasps(resp_gnet->grasps, gripper_offset, finger_width, clearance, tactile, grasps_filtered_gnet, results_gnet);
+        GraspCandidateFilterParams fparams ;
+        fparams.clearence_thresh_ = get_parameter("clearance").as_double();
+        fparams.offset_ = get_parameter("gripper_offset").as_double();
+        fparams.finger_width_ = get_parameter("finger_width").as_double();
+        fparams.n_attempts_6dof_ = get_parameter("n_attempts_6dof").as_int() ;
+        fparams.n_attempts_7dof_ = get_parameter("n_attempts_7dof").as_int() ;
+        fparams.tol_6dof_ = get_parameter("tol_6dof").as_double_array() ;
+        fparams.tol_7dof_ = get_parameter("tol_7dof").as_double_array() ;
+
+        move_group_interface_->filterGrasps(resp_gnet->grasps, fparams, tactile, grasps_filtered_gnet, results_gnet);
         grasps_rviz_pub_->publish(convertToVisualGraspMsg(grasps_filtered_gnet, 0.05, 0.01, 0.01, "world", {1, 0, 0.0f, 0.5f}, "filtered:graspnet"));
 #ifdef USE_GRASP_BOX_SRV
         move_group_interface_->filterGrasps(resp_gbox->grasps, gripper_offset, finger_width, clearance, grasps_filtered_gbox, results_gbox);

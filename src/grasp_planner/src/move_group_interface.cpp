@@ -6,8 +6,53 @@
 #include <moveit_msgs/msg/planning_scene.hpp>
 #include <moveit/kinematics_metrics/kinematics_metrics.h>
 
+#include <cvx/math/rng.hpp>
+
 using namespace std;
 using namespace Eigen;
+using namespace cvx ;
+
+RNG g_rng ;
+
+static void randomizePose(Vector3d &t, Quaterniond &q, const std::vector<double> &tol) {
+    Vector3d euler = q.toRotationMatrix().eulerAngles(0, 1, 2) ;
+
+    Vector3d xyz_tol{tol[0], tol[1], tol[2]} ;
+    Vector3d rpy_tol{tol[3], tol[4], tol[5]} ;
+
+    Vector3d tmin = t - xyz_tol ;
+    Vector3d tmax = t + xyz_tol ;
+
+    Vector3d rmin, rmax ;
+    rmin.x() = euler.x() - rpy_tol.x() ;
+    rmax.x() = euler.x() + rpy_tol.x() ;
+
+    rmin.y() = euler.y() - rpy_tol.y() ;
+    rmax.y() = euler.y() + rpy_tol.y() ;
+
+    rmin.z() = euler.z() - rpy_tol.z() ;
+    rmax.z() = euler.z() + rpy_tol.z() ;
+
+    double lower_bounds[6], upper_bounds[6] ;
+
+    lower_bounds[0] = tmin.x() ; upper_bounds[0] = tmax.x() ;
+    lower_bounds[1] = tmin.y() ; upper_bounds[1] = tmax.y() ;
+    lower_bounds[2] = tmin.z() ; upper_bounds[2] = tmax.z() ;
+    lower_bounds[3] = rmin.x() ; upper_bounds[3] = rmax.x() ;
+    lower_bounds[4] = rmin.y() ; upper_bounds[4] = rmax.y() ;
+    lower_bounds[5] = rmin.z() ; upper_bounds[5] = rmax.z() ;
+
+    double X = g_rng.uniform(lower_bounds[0], upper_bounds[0]) ;
+    double Y = g_rng.uniform(lower_bounds[1], upper_bounds[1]) ;
+    double Z = g_rng.uniform(lower_bounds[2], upper_bounds[2]) ;
+    double r = g_rng.uniform(lower_bounds[3], upper_bounds[3]) ;
+    double p = g_rng.uniform(lower_bounds[4], upper_bounds[4]) ;
+    double y = g_rng.uniform(lower_bounds[5], upper_bounds[5]) ;
+
+    q = AngleAxisd(r, Vector3d::UnitX()) * AngleAxisd(p, Vector3d::UnitY()) * AngleAxisd(y, Vector3d::UnitZ());
+    t = Vector3d{X, Y, Z} ;
+
+}
 
 MoveGroupInterfaceNode::MoveGroupInterfaceNode(const rclcpp::NodeOptions &options) : rclcpp::Node("move_group_interface", options)
 {
@@ -41,22 +86,20 @@ struct ReachTest
 };
 
 void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interfaces::msg::Grasp> &candidates,
-                                          float depth_offset, float finger_width, float dist_thresh, bool tactile,
+                                          const GraspCandidateFilterParams &params, bool tactile,
                                           std::vector<grasp_planner_interfaces::msg::Grasp> &filtered,
                                           std::vector<GraspCandidate> &result)
 {
     planning_scene_monitor::LockedPlanningSceneRO planning_scene(planning_scene_monitor_);
 
- //   MoveItIKSolver solver_left_arm(planning_scene, "iiwa_left_arm", "iiwa_left_ee", dist_thresh);
- //   MoveItIKSolver solver_right_arm(planning_scene, "iiwa_right_arm", "iiwa_right_ee", dist_thresh);
+    string prefix = (tactile) ? "_tactile" : "";
 
-    string prefix = ( tactile ) ? "_tactile" : "" ;
-
-    MoveItIKSolver solver_left_arm(planning_scene, "iiwa_left_arm" + prefix, "iiwa_left" + prefix + "_ee", dist_thresh);
-    MoveItIKSolver solver_right_arm(planning_scene, "iiwa_right_arm" + prefix, "iiwa_right" + prefix + "_ee", dist_thresh);
-
+    MoveItIKSolver solver_left_arm(planning_scene, "iiwa_left_arm" + prefix, "iiwa_left" + prefix + "_ee", params.clearence_thresh_);
+    MoveItIKSolver solver_right_arm(planning_scene, "iiwa_right_arm" + prefix, "iiwa_right" + prefix + "_ee", params.clearence_thresh_);
 
     std::vector<ReachTest> tests;
+
+    const uint n_attempts = tactile ? params.n_attempts_6dof_ : params.n_attempts_7dof_ ;
 
     uint count = 0;
     for (const auto &grasp : candidates)
@@ -66,37 +109,44 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
 
         Eigen::Vector3d c(trv.x, trv.y, trv.z);
         Eigen::Quaterniond rot(rotv.w, rotv.x, rotv.y, rotv.z);
-        Eigen::Matrix3d m = rot.toRotationMatrix();
 
-        auto approach = m.col(0).eval();
-        auto binormal = m.col(1).eval();
-        auto xc = m.col(2).eval();
-
-        if (binormal.y() < 0)
+        for (uint k = 0; k < n_attempts; k++)
         {
-            binormal = -binormal;
-            xc = -xc;
+            if (k > 0)
+                randomizePose(c, rot, tactile ? params.tol_6dof_ : params.tol_7dof_ );
+
+            Eigen::Matrix3d m = rot.toRotationMatrix();
+
+            auto approach = m.col(0).eval();
+            auto binormal = m.col(1).eval();
+            auto xc = m.col(2).eval();
+
+            if (binormal.y() < 0)
+            {
+                binormal = -binormal;
+                xc = -xc;
+            }
+            double hw = 0.5 * grasp.width;
+            double hand_depth = grasp.depth;
+
+            Vector3d left_tip = c - (hw + params.finger_width_ / 2) * binormal + approach * (hand_depth - params.offset_);
+            Vector3d right_tip = c + (hw + params.finger_width_ / 2) * binormal + approach * (hand_depth - params.offset_);
+
+            Matrix3d trot;
+            trot.col(0) = approach;
+            trot.col(1) = binormal;
+            trot.col(2) = xc;
+
+            Quaterniond qrot(trot);
+
+            ReachTest test;
+            test.l_ = left_tip;
+            test.r_ = right_tip;
+            test.rot_ = trot;
+            test.candidate_ = count++;
+
+            tests.emplace_back(test);
         }
-        double hw = 0.5 * grasp.width;
-        double hand_depth = grasp.depth;
-
-        Vector3d left_tip = c - (hw + finger_width / 2) * binormal + approach * (hand_depth - depth_offset);
-        Vector3d right_tip = c + (hw + finger_width / 2) * binormal + approach * (hand_depth - depth_offset);
-
-        Matrix3d trot;
-        trot.col(0) = approach;
-        trot.col(1) = binormal;
-        trot.col(2) = xc;
-
-        Quaterniond qrot(trot);
-
-        ReachTest test;
-        test.l_ = left_tip;
-        test.r_ = right_tip;
-        test.rot_ = trot;
-        test.candidate_ = count++;
-
-        tests.emplace_back(test);
     }
 
     // left hand reachability
@@ -107,7 +157,7 @@ void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interf
     state.setToDefaultValues("iiwa_right_arm", "upright");
 
 #ifdef DEBUG
-cout << "left arm" << endl ;
+    cout << "left arm" << endl;
 #endif
 #pragma omp parallel for
     for (size_t i = 0; i < tests.size(); i++)
@@ -117,11 +167,13 @@ cout << "left arm" << endl ;
 
         if (!ls.empty())
         {
-            if ( tactile ) ls.push_back(0) ;
+            if (tactile)
+                ls.push_back(0);
 #ifdef DEBUG
-            for(int j=0 ; j<ls.size() ; j++ ) cout << ls[j] * 180/M_PI << endl ;
-            cout << endl ;
-#endif            
+            for (int j = 0; j < ls.size(); j++)
+                cout << ls[j] * 180 / M_PI << endl;
+            cout << endl;
+#endif
             test.ls_ = ls;
             test.lm_ = manip;
         }
@@ -132,7 +184,7 @@ cout << "left arm" << endl ;
     state.setToDefaultValues("iiwa_left_arm", "upright");
 
 #ifdef DEBUG
-    cout << "right arm" << endl ;
+    cout << "right arm" << endl;
 #endif
 
 #pragma omp parallel for
@@ -145,10 +197,12 @@ cout << "left arm" << endl ;
 
         if (!rs.empty())
         {
-            if ( tactile ) rs.push_back(M_PI) ;
-#ifdef DEBUG            
-            for(int j=0 ; j<rs.size() ; j++ ) cout << rs[j] * 180/M_PI << endl ;
-            cout << endl ;
+            if (tactile)
+                rs.push_back(M_PI);
+#ifdef DEBUG
+            for (int j = 0; j < rs.size(); j++)
+                cout << rs[j] * 180 / M_PI << endl;
+            cout << endl;
 #endif
             test.rs_ = rs;
             test.rm_ = manip;
