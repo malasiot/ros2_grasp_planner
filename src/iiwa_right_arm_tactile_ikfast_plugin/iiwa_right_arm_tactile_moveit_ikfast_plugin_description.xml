@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<library path="iiwa_right_arm_tactile_moveit_ikfast_plugin">
+  <class name="iiwa_right_arm_tactile/IKFastKinematicsPlugin" type="iiwa_right_arm_tactile::IKFastKinematicsPlugin" base_class_type="kinematics::KinematicsBase">
+    <description>IKFast61 plugin for closed-form kinematics of iiwa_right_arm_tactile</description>
+  </class>
+</library>

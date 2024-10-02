@@ -29,6 +29,9 @@ GraspBoxService::GraspBoxService(const rclcpp::NodeOptions &options) : rclcpp::N
     boxes_rviz_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>(viz_topic_boxes, 10);
 
     service_ = create_service<GraspBoxSrv>("grasp_box_service", std::bind(&GraspBoxService::callback, this, std::placeholders::_1, std::placeholders::_2), rmw_qos_profile_services_default);
+
+    segmentation_client_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    segmentation_client_ = create_client<SegmentationSrv>("segmentation", rmw_qos_profile_services_default, segmentation_client_group_);
 }
 
 using namespace std::literals::chrono_literals;
@@ -123,6 +126,47 @@ void GraspBoxService::callback(const std::shared_ptr<GraspBoxSrv::Request> reque
     cv::Mat depth = cv_bridge::toCvCopy(request->depth, sensor_msgs::image_encodings::TYPE_16UC1)->image;
     cv::Mat clr = cv_bridge::toCvCopy(request->rgb, sensor_msgs::image_encodings::BGR8)->image;
     cv::Mat mask = cv_bridge::toCvCopy(request->mask, sensor_msgs::image_encodings::TYPE_8UC1)->image;
+    
+    while (!segmentation_client_->wait_for_service(1s)) {
+        if ( !rclcpp::ok() ) {
+            RCLCPP_ERROR(get_logger(), "Interrupted while waiting for segmentation service. Exiting.");
+            return;
+        }
+        RCLCPP_INFO(get_logger(), "service not available, waiting again...");
+    }
+
+    auto seg_request = std::make_shared<SegmentationSrv::Request>();
+
+    std_msgs::msg::Header header; // empty header
+    header.stamp = get_clock()->now();
+    header.frame_id = "camera";
+
+    auto rgb_bridge = std::make_shared<cv_bridge::CvImage>(header, sensor_msgs::image_encodings::BGR8, clr);
+    rgb_bridge->toImageMsg(seg_request->image);
+    
+    auto result = segmentation_client_->async_send_request(seg_request);
+
+    auto status = result.wait_for(60s);
+
+    if (status == std::future_status::ready) {
+        RCLCPP_INFO(get_logger(), "Segmentation succesfull");
+    } else {
+        RCLCPP_ERROR(get_logger(), "Segmentation failed");
+    }
+
+    auto seg_result = result.get() ;
+
+    cv_bridge::CvImagePtr cv_ptr;
+    try {
+        cv_ptr = cv_bridge::toCvCopy(seg_result->segmented_image, sensor_msgs::image_encodings::BGR8);
+    } catch (cv_bridge::Exception& e) {
+        RCLCPP_ERROR(get_logger(), "cv_bridge exception: %s", e.what());
+        return;
+    }
+
+    cv::Mat seg_mask = cv_ptr->image ;
+
+    cv::imwrite("segmented_images/rgb.png", seg_mask) ;
 
     Camera cam;
 
@@ -138,7 +182,7 @@ void GraspBoxService::callback(const std::shared_ptr<GraspBoxSrv::Request> reque
 
     BoxDetector detector;
 
-    cv::Mat seg_mask = cv::imread("segmented_images/rgb.png");
+   // cv::Mat seg_mask = cv::imread("segmented_images/rgb.png");
 
     auto boxes = detector.detect(cam, depth, mask, seg_mask);
 

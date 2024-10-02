@@ -136,6 +136,29 @@ def generate_launch_description():
         namespace=namespace,
         output="screen"
     )
+
+    graspbox_service_node = Node(
+        package="grasp_box",
+        executable="grasp_box_service",
+        namespace=namespace,
+        output="screen"
+    )
+
+    sam_config = os.path.join(
+        get_package_share_directory('sam'),
+        'config',
+        'params.yaml'
+    )
+
+    
+    segmentation_node = Node(
+        package="sam",
+        name="segmentation_service",
+        executable="seg_points_srv",
+        parameters=[sam_config],
+        namespace=namespace,
+        output="screen"
+    )
   
     package_share_directory = get_package_share_directory('grasp_planner')
     
@@ -169,7 +192,9 @@ def generate_launch_description():
  #       camera_tf_node,
         robot_mask_node,
         graspnet_service_node,
-        grasp_planning_node
+        grasp_planning_node,
+        segmentation_node,
+        graspbox_service_node
     ]
 
     return LaunchDescription(declared_arguments + nodes)

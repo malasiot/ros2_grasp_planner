@@ -7,6 +7,7 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 #include "grasp_planner_interfaces/srv/grasp_box.hpp"
 #include "grasp_planner_interfaces/msg/grasp.hpp"
+#include "grasp_planner_interfaces/srv/segmentation.hpp"
 
 struct Box ;
 
@@ -17,8 +18,11 @@ public:
 private:
     
     using GraspBoxSrv = grasp_planner_interfaces::srv::GraspBox;
+    using SegmentationSrv = grasp_planner_interfaces::srv::Segmentation ;
 
     rclcpp::Service<GraspBoxSrv>::SharedPtr service_ ;
+    std::shared_ptr<rclcpp::Client<SegmentationSrv>> segmentation_client_ ;
+    rclcpp::CallbackGroup::SharedPtr segmentation_client_group_ ;
    
     std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>> boxes_rviz_pub_ ;
 

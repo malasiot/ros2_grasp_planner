@@ -26,7 +26,6 @@ GraspPlannerService::GraspPlannerService(const rclcpp::NodeOptions &options) : r
     declare_parameter("n_attempts_7dof", 1);
     declare_parameter("tol_6dof", std::vector<double>{0.02, 0.02, 0.02, 0.05, 0.2, 0.05});
     declare_parameter("tol_7dof", std::vector<double>{0.01, 0.01, 0.01, 0.01, 0.01, 0.01});
-    
 
     grasps_rviz_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>(viz_topic, 10);
 
@@ -130,13 +129,12 @@ rclcpp::Client<GraspPlannerService::GraspBox>::FutureAndRequestId GraspPlannerSe
     return graspbox_client_->async_send_request(graspbox_request);
 }
 
-//#define USE_GRASP_BOX_SRV 1
-
 void GraspPlannerService::plan(const std::shared_ptr<GraspPlannerSrv::Request> request, std::shared_ptr<GraspPlannerSrv::Response> response)
 {
-    bool tactile = request->end_effector == GraspPlannerSrv::Request::GRASP_WITH_TACTILE ;
+    bool tactile = request->end_effector == GraspPlannerSrv::Request::GRASP_WITH_TACTILE;
     auto tf_buffer = std::make_unique<tf2_ros::Buffer>(get_clock());
     auto tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
+    uint8_t algorithm = request->algorithm;
 
     while (!masked_point_cloud_->hasFrame())
     {
@@ -172,154 +170,135 @@ void GraspPlannerService::plan(const std::shared_ptr<GraspPlannerSrv::Request> r
     cv::imwrite("/workspaces/ros2_grasp_planner/depth.png", depth);
     cv::imwrite("/workspaces/ros2_grasp_planner/mask.png", mask);
 
-    while (!graspnet_client_->wait_for_service(1s))
-    {
-        if (!rclcpp::ok())
-        {
-            RCLCPP_ERROR(get_logger(), "Interrupted while waiting for graspnet the service. Exiting.");
-            response->result = GraspPlannerSrv::Response::RESULT_ERROR;
-            return;
-        }
-        RCLCPP_INFO(get_logger(), "service not available, waiting again...");
-    }
+    size_t max_results = get_parameter("max_results").as_int();
 
-    auto graspnet_result = callGraspNet(rgb, depth, mask, caminfo);
-
-#ifdef USE_GRASP_BOX_SRV
-    while (!graspbox_client_->wait_for_service(1s))
-    {
-        if (!rclcpp::ok())
-        {
-            RCLCPP_ERROR(get_logger(), "Interrupted while waiting for graspbox service. Exiting.");
-            response->result = GraspPlannerSrv::Response::RESULT_ERROR;
-            return;
-        }
-        RCLCPP_INFO(get_logger(), "service not available, waiting again...");
-    }
-
-    auto graspbox_result = callGraspBox(rgb, depth, mask, caminfo, tr.transform);
-#endif
-
-    auto end_time = std::chrono::steady_clock::now();
-    std::chrono::nanoseconds timeout_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(1000s);
-    end_time += timeout_ns;
+    GraspCandidateFilterParams fparams;
+    fparams.clearence_thresh_ = get_parameter("clearance").as_double();
+    fparams.offset_ = get_parameter("gripper_offset").as_double();
+    fparams.finger_width_ = get_parameter("finger_width").as_double();
+    fparams.n_attempts_6dof_ = get_parameter("n_attempts_6dof").as_int();
+    fparams.n_attempts_7dof_ = get_parameter("n_attempts_7dof").as_int();
+    fparams.tol_6dof_ = get_parameter("tol_6dof").as_double_array();
+    fparams.tol_7dof_ = get_parameter("tol_7dof").as_double_array();
 
     std::future_status status;
+    std::vector<GraspCandidate> results ;
 
-    while (rclcpp::ok())
-    {
-
-        // Check if the future is set, return SUCCESS if it is.
-        auto status_graspnet = graspnet_result.wait_for(std::chrono::seconds(0));
-
-        std::future_status status_graspbox = std::future_status::ready;
-#ifdef USE_GRASP_BOX_SRV
-        status_graspbox = graspbox_result.wait_for(std::chrono::seconds(0));
-#endif
-        if (status_graspnet == std::future_status::ready && status_graspbox == std::future_status::ready)
+    if ( algorithm == GraspPlannerSrv::Request::ALGORITHM_GRASPNET ) {
+        while (!graspnet_client_->wait_for_service(1s))
         {
-            status = std::future_status::ready;
-            break;
+            if (!rclcpp::ok())
+            {
+                RCLCPP_ERROR(get_logger(), "Interrupted while waiting for graspnet the service. Exiting.");
+                response->result = GraspPlannerSrv::Response::RESULT_ERROR;
+                return;
+            }
+            RCLCPP_INFO(get_logger(), "service not available, waiting again...");
         }
 
-        auto now = std::chrono::steady_clock::now();
-        if (now >= end_time)
-        {
-            status = std::future_status::timeout;
-            break;
-        }
-    }
+        auto graspnet_result = callGraspNet(rgb, depth, mask, caminfo);
 
-    // Wait for the result.
-    //  auto status = graspnet_result.wait_for(10s)  ;
+        status = graspnet_result.wait_for(10s);
 
-    if (status == std::future_status::ready)
-    {
-        auto resp_gnet = graspnet_result.get();
-        RCLCPP_INFO(get_logger(), "Received %ld candidate grasps from graspnet", resp_gnet->grasps.size());
+        if (status == std::future_status::ready) {
+            auto resp_gnet = graspnet_result.get();    
+
+             RCLCPP_INFO(get_logger(), "Received %ld candidate grasps from graspnet", resp_gnet->grasps.size());
 
         // transform to world coordinate frame
-        convertToWorldCoordinates(camera_tr, resp_gnet->grasps);
+            convertToWorldCoordinates(camera_tr, resp_gnet->grasps);
 
 #ifdef DEBUG
-        resp_gnet->grasps.clear() ;
+        resp_gnet->grasps.clear();
 
-        grasp_planner_interfaces::msg::Grasp g ;
-        g.depth = 0.05 ;
-        g.height = 0.05 ;
+        grasp_planner_interfaces::msg::Grasp g;
+        g.depth = 0.05;
+        g.height = 0.05;
         g.score = 0.5;
-        g.width = 0.3 ;
-        g.translation.x = 0.75 ;
-        g.translation.y = 0 ;
-        g.translation.z = 0.5 ;
+        g.width = 0.3;
+        g.translation.x = 0.75;
+        g.translation.y = 0;
+        g.translation.z = 0.5;
         resp_gnet->grasps.emplace_back(g);
         // publish markers
 #endif
-        grasps_rviz_pub_->publish(convertToVisualGraspMsg(resp_gnet->grasps, 0.05, 0.01, 0.01, "world", {0, 0, 1.0f, 0.5f}, "candidates:graspnet"));
+            grasps_rviz_pub_->publish(convertToVisualGraspMsg(resp_gnet->grasps, 0.05, 0.01, 0.01, "world", {0, 0, 1.0f, 0.5f}, "candidates:graspnet"));
 
-#ifdef USE_GRASP_BOX_SRV
-        auto resp_gbox = graspbox_result.get();
-        RCLCPP_INFO(get_logger(), "Received %ld candidate grasps from graspbox", resp_gbox->grasps.size());
-
-        // publish markers
-        grasps_rviz_pub_->publish(convertToVisualGraspMsg(resp_gbox->grasps, 0.05, 0.01, 0.01, "world", {0, 1.0f, 0.0f, 0.5f}, "candidates:graspbox"));
-#endif
-
-        RCLCPP_INFO(get_logger(), "Filtering non-reachable candidates");
-        vector<grasp_planner_interfaces::msg::Grasp> grasps_filtered_gnet, grasps_filtered_gbox;
-        vector<GraspCandidate> results_gnet, results_gbox, results;
-        
-        size_t max_results = get_parameter("max_results").as_int();
-
-        GraspCandidateFilterParams fparams ;
-        fparams.clearence_thresh_ = get_parameter("clearance").as_double();
-        fparams.offset_ = get_parameter("gripper_offset").as_double();
-        fparams.finger_width_ = get_parameter("finger_width").as_double();
-        fparams.n_attempts_6dof_ = get_parameter("n_attempts_6dof").as_int() ;
-        fparams.n_attempts_7dof_ = get_parameter("n_attempts_7dof").as_int() ;
-        fparams.tol_6dof_ = get_parameter("tol_6dof").as_double_array() ;
-        fparams.tol_7dof_ = get_parameter("tol_7dof").as_double_array() ;
-
-        move_group_interface_->filterGrasps(resp_gnet->grasps, fparams, tactile, grasps_filtered_gnet, results_gnet);
-        grasps_rviz_pub_->publish(convertToVisualGraspMsg(grasps_filtered_gnet, 0.05, 0.01, 0.01, "world", {1, 0, 0.0f, 0.5f}, "filtered:graspnet"));
-#ifdef USE_GRASP_BOX_SRV
-        move_group_interface_->filterGrasps(resp_gbox->grasps, gripper_offset, finger_width, clearance, grasps_filtered_gbox, results_gbox);
-        grasps_rviz_pub_->publish(convertToVisualGraspMsg(grasps_filtered_gbox, 0.05, 0.01, 0.01, "world", {1, 1, 0.0f, 0.5f}, "filtered:graspbox"));
-#endif
-        // merge candidates
-        results.insert( results.end(), results_gnet.begin(), results_gnet.end() );
-        results.insert( results.end(), results_gbox.begin(), results_gbox.end() );
-
-        // sort candidates
-        std::sort(results.begin(), results.end(), [](const GraspCandidate &a, const GraspCandidate &b)
-                  {
-                      double ma = a.lm_ + a.rm_, mb = b.lm_ + b.rm_;
-
-                      return ma > mb; // sort based on manipulability
-                  });
-
-        // visualize robot state for best result
-        if (!results.empty())
-            move_group_interface_->visualizeResult(results[0]);
-
-        RCLCPP_INFO(get_logger(), "Found %ld reachable grasps", results.size());
-
-        // motion planning to compute trajectories
-        move_group_interface_->computeMotionPlans(results, request->start_state, max_results);
-
-        RCLCPP_INFO(get_logger(), "Finished");
-
-        for (uint i = 0; i < std::min(results.size(), max_results); i++)
-        {
-            const auto &result = results[i];
-            response->trajectories.push_back(result.trajectory_.joint_trajectory);
+            RCLCPP_INFO(get_logger(), "Filtering non-reachable candidates");
+            vector<grasp_planner_interfaces::msg::Grasp> grasps_filtered;
+     
+            move_group_interface_->filterGrasps(resp_gnet->grasps, fparams, tactile, grasps_filtered, results);
+            grasps_rviz_pub_->publish(convertToVisualGraspMsg(grasps_filtered, 0.05, 0.01, 0.01, "world", {1, 0, 0.0f, 0.5f}, "filtered:graspnet"));
+        } else  {
+            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Graspnet service did not respond");
+            response->result = GraspPlannerSrv::Response::RESULT_ERROR;
+            return ;
         }
 
-        response->result = (results.empty()) ? GraspPlannerSrv::Response::RESULT_NOT_FOUND : GraspPlannerSrv::Response::RESULT_OK;
+    } else {
+        while (!graspbox_client_->wait_for_service(1s))
+        {
+            if (!rclcpp::ok())
+            {
+                RCLCPP_ERROR(get_logger(), "Interrupted while waiting for graspbox service. Exiting.");
+                response->result = GraspPlannerSrv::Response::RESULT_ERROR;
+                return;
+            }
+            RCLCPP_INFO(get_logger(), "service not available, waiting again...");
+        }
+
+        auto graspbox_result = callGraspBox(rgb, depth, mask, caminfo, tr.transform);
+
+        status = graspbox_result.wait_for(60s);
+
+        if (status == std::future_status::ready) {
+            auto resp_gbox = graspbox_result.get();    
+
+            RCLCPP_INFO(get_logger(), "Received %ld candidate grasps from graspbox", resp_gbox->grasps.size());
+
+        // transform to world coordinate frame
+          //  convertToWorldCoordinates(camera_tr, resp_gbox->grasps);
+
+            grasps_rviz_pub_->publish(convertToVisualGraspMsg(resp_gbox->grasps, 0.05, 0.01, 0.01, "world", {0, 0, 1.0f, 0.5f}, "candidates:graspbox"));
+
+            RCLCPP_INFO(get_logger(), "Filtering non-reachable candidates");
+            vector<grasp_planner_interfaces::msg::Grasp> grasps_filtered;
+     
+            move_group_interface_->filterGrasps(resp_gbox->grasps, fparams, tactile, grasps_filtered, results);
+            grasps_rviz_pub_->publish(convertToVisualGraspMsg(grasps_filtered, 0.05, 0.01, 0.01, "world", {1, 0, 0.0f, 0.5f}, "filtered:graspbox"));
+
+        } else  {
+            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Graspbox service did not respond");
+            response->result = GraspPlannerSrv::Response::RESULT_ERROR;
+            return ;
+        }
+    
+        
     }
-    else
-    {
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Graspnet or Graspbox service did not respond");
-        response->result = GraspPlannerSrv::Response::RESULT_ERROR;
+
+        // sort candidates
+    std::sort(results.begin(), results.end(), [](const GraspCandidate &a, const GraspCandidate &b)  {
+        double ma = a.lm_ + a.rm_, mb = b.lm_ + b.rm_;
+        return ma > mb; // sort based on manipulability
+    });
+
+    // visualize robot state for best result
+    if (!results.empty())
+        move_group_interface_->visualizeResult(results[0]);
+
+    RCLCPP_INFO(get_logger(), "Found %ld reachable grasps", results.size());
+
+    // motion planning to compute trajectories
+    move_group_interface_->computeMotionPlans(results, request->start_state, max_results);
+
+    RCLCPP_INFO(get_logger(), "Finished");
+
+    for (uint i = 0; i < std::min(results.size(), max_results); i++) {
+        const auto &result = results[i];
+        response->trajectories.push_back(result.trajectory_.joint_trajectory);
     }
+
+    response->result = (results.empty()) ? GraspPlannerSrv::Response::RESULT_NOT_FOUND : GraspPlannerSrv::Response::RESULT_OK;
+    
+    
 }

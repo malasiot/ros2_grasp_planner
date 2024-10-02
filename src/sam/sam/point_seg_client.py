@@ -5,6 +5,7 @@ from cv_bridge import CvBridge
 import cv2
 import os
 import sys
+import argparse
 from grasp_planner_interfaces.srv import Segmentation
 
 
@@ -36,24 +37,26 @@ class SegmentationClient(Node):
             segmented_image = self.bridge.imgmsg_to_cv2(response.segmented_image, desired_encoding='bgr8')
             # scores = response.scores
 
-            filename = f"./segmented_images/{response.frame_id}"
+            filename = f"./segmented_images/result.png"
             cv2.imwrite(filename, segmented_image)
         except Exception as e:
             self.get_logger().info(f'Service call failed: {e}')
 
 
 def main(args=None):
-    image_dir = "/workspaces/ros2_grasp_planner/src/sam/dataset/"  # Change this to your image directory
+
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('filenames', metavar='f', type=str, nargs='+',
+                    help='files to process')
    
     rclpy.init(args=args)
+
+    args = parser.parse_args() ;
+
     segmentation_client = SegmentationClient()
   
-    num_images = len(os.listdir(image_dir))
-    processed_images = 0
-    futures = []
 
-    for filename in os.listdir(image_dir):
-        image_path = os.path.join(image_dir, filename)
+    for image_path in args.filenames:
         future = segmentation_client.send_image(image_path)
         segmentation_client.callback(future)
 

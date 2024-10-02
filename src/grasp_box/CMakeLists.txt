@@ -60,5 +60,7 @@ ament_target_dependencies(
 
 target_link_libraries(grasp_box_service cvx ${OpenCV_LIBRARIES})
 
+install(TARGETS grasp_box_service DESTINATION lib/${PROJECT_NAME})
+
 
 ament_package()

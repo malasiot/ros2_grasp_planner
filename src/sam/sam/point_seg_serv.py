@@ -66,17 +66,18 @@ class SegmentationService(Node):
         cv_image = self.bridge.imgmsg_to_cv2(request.image, desired_encoding='bgr8')
 
         # Perform segmentation with SAM model
+        self.get_logger().debug("segmentation started")
         result = self.sam.segment(cv_image)
-
+        self.get_logger().debug("segmentation finished")
         # Combine masks into a single segmented image
-        segmented_image = combine_masks_points(result, cv_image, request.input_string, self.min_mask)
-
+        segmented_image = combine_masks_points(result, cv_image, self.min_mask)
+        
         #blended_image = cv2.addWeighted(cv_image, 0.4, segmented_image, 0.6, 0)
         # Convert segmented image to ROS Image message
         segmented_msg = self.bridge.cv2_to_imgmsg(segmented_image, encoding='bgr8')
         response.segmented_image = segmented_msg
         response.frame_id = request.input_string
-
+        
         return response
 
     def shutdown_if_idle(self):

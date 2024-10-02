@@ -4,7 +4,7 @@ import pickle
 import os
 
 
-def combine_masks_points(result, cv_image, frame_id, min_mask):
+def combine_masks_points(result, cv_image, min_mask):
     """
     Combine masks into a single segmented image and save the results of the sam model, utillizing the points implementation as input prompt
     masks: compressed rle format
@@ -25,13 +25,6 @@ def combine_masks_points(result, cv_image, frame_id, min_mask):
             ind = binary_mask > 0
             segmented_image[ind, :] = color
 
-    path = './segmented_images'
-    if not os.path.exists(path):
-        os.makedirs(path)
-    file_path = frame_id.replace(".jpg", "")
-
-    with open(f"{path}/{file_path}.pkl", 'wb') as f:
-        pickle.dump(save_dict, f)
     return segmented_image
 
 
