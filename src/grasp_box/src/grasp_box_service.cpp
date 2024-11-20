@@ -108,12 +108,12 @@ static void makeSideGrasp(const Box &box, std::vector<grasp_planner_interfaces::
     grasps.emplace_back(std::move(grasp)) ;
 }
 
-static void makeGrasps(const std::vector<Box> &boxes, std::vector<grasp_planner_interfaces::msg::Grasp> &grasps, float dist, float height) {
+static void makeGrasps(const std::vector<Box> &boxes, std::vector<grasp_planner_interfaces::msg::Grasp> &grasps, float dist, float height, float clearance) {
     const float offset_step = 0.05f ;
     for(const auto &box: boxes) {
         grasp_planner_interfaces::msg::Grasp g ;
         for( float offset = -box.sz_.z()/2 ; offset < box.sz_.z()/2 ; offset += offset_step ) {
-            makeSideGrasp(box, grasps, dist, box.sz_.y(), height, offset) ;
+            makeSideGrasp(box, grasps, dist, box.sz_.y() + clearance * 2, height, offset) ;
         }
     }
 }
@@ -186,7 +186,7 @@ void GraspBoxService::callback(const std::shared_ptr<GraspBoxSrv::Request> reque
 
     auto boxes = detector.detect(cam, depth, mask, seg_mask);
 
-    makeGrasps(boxes, response->grasps, 0.05, 0.05) ;
+    makeGrasps(boxes, response->grasps, 0.05, 0.05, 0.05) ;
 
     visualizeBoxes(boxes) ;
 }
