@@ -17,4 +17,4 @@
 
 #### Other services/nodes used:
 - [GraspNet](../../src/graspnet_service/graspnet_service/README.md)
-- [Box Detector](../../../src/grasp_box/README.md)
+- [Box Detector](../../src/grasp_box/README.md)
