@@ -34,3 +34,9 @@ Preliminary testing has so far been performed using a virtual camera (rendering 
 ### Limitations
 
 
+
+### Services 
+
+- [GraspCandidates](src/grasp_planner/README.md): Get grasp candidates from point cloud
+
+
