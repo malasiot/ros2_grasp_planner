@@ -88,7 +88,7 @@ visualization_msgs::msg::Marker createFingerMarker(
 
 
 visualization_msgs::msg::MarkerArray convertToVisualGraspMsg(
-  const std::vector<grasp_planner_interfaces::msg::Grasp> & hands,
+  const std::vector<grasp_planner_msgs::msg::Grasp> & hands,
   double hand_length, double finger_width, double finger_height,
   const std::string & frame_id, const Vector4f &clr, const std::string &ns) {
 

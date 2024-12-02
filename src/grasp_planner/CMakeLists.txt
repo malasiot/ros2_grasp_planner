@@ -78,6 +78,41 @@ ament_target_dependencies(reachability
 install(TARGETS grasp_planner_service reachability
   DESTINATION lib/${PROJECT_NAME})
 
+  ################################## grasp_candidates_service ###########################################
+
+add_executable(grasp_candidates_service
+src/grasp_candidate_service.cpp 
+src/viz.cpp 
+src/grasp_candidates_node.cpp
+src/grasp_candidates_node.hpp
+src/masked_point_cloud.cpp
+src/masked_point_cloud.hpp
+)
+
+target_include_directories(grasp_candidates_service PUBLIC
+$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+$<INSTALL_INTERFACE:include>
+${OpenCV_INCLUDE_DIRS})
+
+target_compile_features(grasp_candidates_service PUBLIC cxx_std_17)  # Require C++17
+
+ament_target_dependencies(grasp_candidates_service
+rclcpp  std_msgs sensor_msgs geometry_msgs 
+cv_bridge Eigen3 cvx
+visualization_msgs
+image_transport
+image_geometry
+tf2
+tf2_ros tf2_eigen
+grasp_planner_msgs
+grasp_planner_interfaces
+)
+target_link_libraries(grasp_candidates_service ${OpenCV_LIBS} Eigen3::Eigen cvx OpenMP::OpenMP_CXX)
+
+
+install(TARGETS grasp_candidates_service DESTINATION lib/${PROJECT_NAME})
+
+################################################################################################3
 install(
   DIRECTORY launch data config
   DESTINATION share/${PROJECT_NAME}

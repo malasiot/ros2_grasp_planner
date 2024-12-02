@@ -6,8 +6,10 @@
 #include <sensor_msgs/msg/image.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 #include "grasp_planner_interfaces/srv/grasp_box.hpp"
-#include "grasp_planner_interfaces/msg/grasp.hpp"
 #include "grasp_planner_interfaces/srv/segmentation.hpp"
+
+#include "grasp_planner_msgs/msg/grasp.hpp"
+
 
 struct Box ;
 

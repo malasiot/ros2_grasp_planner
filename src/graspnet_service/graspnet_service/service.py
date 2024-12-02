@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from grasp_planner_interfaces.srv import GraspNet as GraspNetInterface
-from grasp_planner_interfaces.msg import Grasp as GraspInterface
+from grasp_planner_msgs.msg import Grasp as GraspInterface
 from cv_bridge import CvBridge
 
 import rclpy

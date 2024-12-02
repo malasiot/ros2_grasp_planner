@@ -8,7 +8,7 @@
 #include <thread>
 #include <cvx/math/rng.hpp>
 
-#include <grasp_planner_interfaces/msg/grasp.hpp>
+#include <grasp_planner_msgs/msg/grasp.hpp>
 
 using namespace std;
 using namespace Eigen;
@@ -81,8 +81,8 @@ void GraspBoxService::visualizeBoxes(const std::vector<Box> &boxes)
     boxes_rviz_pub_->publish(marker_array);
 }
 
-static void makeSideGrasp(const Box &box, std::vector<grasp_planner_interfaces::msg::Grasp> &grasps, float dist, float width, float height, float offset) {
-    grasp_planner_interfaces::msg::Grasp grasp ;
+static void makeSideGrasp(const Box &box, std::vector<grasp_planner_msgs::msg::Grasp> &grasps, float dist, float width, float height, float offset) {
+    grasp_planner_msgs::msg::Grasp grasp ;
 
     Vector3f center{-box.sz_.x()/2, 0, offset} ;
     
@@ -108,10 +108,10 @@ static void makeSideGrasp(const Box &box, std::vector<grasp_planner_interfaces::
     grasps.emplace_back(std::move(grasp)) ;
 }
 
-static void makeGrasps(const std::vector<Box> &boxes, std::vector<grasp_planner_interfaces::msg::Grasp> &grasps, float dist, float height, float clearance) {
+static void makeGrasps(const std::vector<Box> &boxes, std::vector<grasp_planner_msgs::msg::Grasp> &grasps, float dist, float height, float clearance) {
     const float offset_step = 0.05f ;
     for(const auto &box: boxes) {
-        grasp_planner_interfaces::msg::Grasp g ;
+        grasp_planner_msgs::msg::Grasp g ;
         for( float offset = -box.sz_.z()/2 ; offset < box.sz_.z()/2 ; offset += offset_step ) {
             makeSideGrasp(box, grasps, dist, box.sz_.y() + clearance * 2, height, offset) ;
         }

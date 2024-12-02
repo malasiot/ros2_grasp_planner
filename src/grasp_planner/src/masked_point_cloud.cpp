@@ -1,7 +1,7 @@
 #include "masked_point_cloud.hpp"
 
 #include <sensor_msgs/point_cloud2_iterator.hpp>
-#include <image_geometry/image_geometry/pinhole_camera_model.h>
+#include <image_geometry/pinhole_camera_model.h>
 #include "tf2/exceptions.h"
 #include "tf2_eigen/tf2_eigen.hpp"
 #include <chrono>

@@ -15,6 +15,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(grasp_planner_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/GraspNet.srv"
@@ -23,7 +24,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/Reachability.srv"
   "srv/Segmentation.srv"
   "msg/Grasp.msg"
-  DEPENDENCIES sensor_msgs geometry_msgs
+  DEPENDENCIES sensor_msgs geometry_msgs grasp_planner_msgs
 )
 
 ament_export_dependencies(rosidl_default_runtime)

@@ -85,9 +85,9 @@ struct ReachTest
     std::vector<double> ls_, rs_;
 };
 
-void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_interfaces::msg::Grasp> &candidates,
+void MoveGroupInterfaceNode::filterGrasps(const std::vector<grasp_planner_msgs::msg::Grasp> &candidates,
                                           const GraspCandidateFilterParams &params, bool tactile,
-                                          std::vector<grasp_planner_interfaces::msg::Grasp> &filtered,
+                                          std::vector<grasp_planner_msgs::msg::Grasp> &filtered,
                                           std::vector<GraspCandidate> &result)
 {
     planning_scene_monitor::LockedPlanningSceneRO planning_scene(planning_scene_monitor_);

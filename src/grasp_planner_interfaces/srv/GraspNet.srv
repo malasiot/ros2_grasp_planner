@@ -3,4 +3,4 @@ sensor_msgs/Image depth
 sensor_msgs/Image mask
 sensor_msgs/CameraInfo camera_info
 ---
-grasp_planner_interfaces/Grasp[] grasps   # indicate successful run of triggered service
+grasp_planner_msgs/Grasp[] grasps   # indicate successful run of triggered service

@@ -2,7 +2,7 @@
 
 #include <rclcpp/node.hpp>
 #include "moveit_ik.hpp"
-#include <grasp_planner_interfaces/msg/grasp.hpp>
+#include <grasp_planner_msgs/msg/grasp.hpp>
 #include <moveit/planning_scene_monitor/planning_scene_monitor.h>
 #include <moveit_msgs/msg/display_robot_state.hpp>
 #include <moveit_msgs/msg/robot_state.hpp>
@@ -38,9 +38,9 @@ public:
 
     void setup() ;
 
-    void filterGrasps(const std::vector<grasp_planner_interfaces::msg::Grasp> &candidates, const GraspCandidateFilterParams &params,
+    void filterGrasps(const std::vector<grasp_planner_msgs::msg::Grasp> &candidates, const GraspCandidateFilterParams &params,
         bool tactile,
-        std::vector<grasp_planner_interfaces::msg::Grasp> &filtered,
+        std::vector<grasp_planner_msgs::msg::Grasp> &filtered,
         std::vector<GraspCandidate> &res) ;
 
     void computeMotionPlans(std::vector<GraspCandidate> &candidates, const sensor_msgs::msg::JointState &start_state, uint max_plans) ;
