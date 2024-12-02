@@ -16,5 +16,5 @@
 - **camera_frame**: The TF frame of the camera used
 
 #### Other services/nodes used:
-- [GraspNet] (../../../src/graspnet_service/graspnet_service/README.md)
-- [BoxDetector] (../../../src/grasp_box/README.md)
+- [GraspNet](../../../src/graspnet_service/graspnet_service/README.md)
+- [Box Detector](../../../src/grasp_box/README.md)
