@@ -1,6 +1,7 @@
 #include "grasp_candidates_node.hpp"
 #include "masked_point_cloud.hpp"
 
+#include <rclcpp/serialization.hpp>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_eigen/tf2_eigen.hpp>
@@ -259,4 +260,5 @@ void GraspCandidatesNode::candidates(const std::shared_ptr<GraspCandidatesSrv::R
     }
 
     response->result = (response->grasps.empty()) ? GraspCandidatesSrv::Response::RESULT_NOT_FOUND : GraspCandidatesSrv::Response::RESULT_OK;
+
 }

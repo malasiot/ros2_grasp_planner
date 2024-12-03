@@ -1,161 +1,208 @@
 {
-  "configurations": [
-   
-  {
-    "name": "Launch graspnet",
-    "type": "cppdbg",
-    "request": "launch",
-    "program": "${workspaceFolder}/build/grasp_planner/grasp_planner_service",
-   
-    "args": ["--ros-args", "--params-file", "${workspaceFolder}/install/share/iiwa_description/moveit2/dual_kinematics.yaml",
-    "--params-file", "${workspaceFolder}/install/share/grasp_planner/config/params-rs2.yaml" ],
-    "stopAtEntry": true,
-    "cwd": "${workspaceFolder}/src/grasp_planner/",
-    "environment": [
-      
-    ],
-    "externalConsole": false,
-    "MIMode": "gdb",
-    "setupCommands": [
+    "configurations": [
         {
-            "description": "Enable pretty-printing for gdb",
-            "text": "-enable-pretty-printing",
-            "ignoreFailures": true
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
         },
         {
-            "description": "Set Disassembly Flavor to Intel",
-            "text": "-gdb-set disassembly-flavor intel",
-            "ignoreFailures": true
-        }
-    ]
-  },
-  {
-    "name": "Launch graspbox service",
-    "type": "cppdbg",
-    "request": "launch",
-    "program": "${workspaceFolder}/build/grasp_box/grasp_box_service",
-   
-    "args": ["--ros-args", "--params-file", "${workspaceFolder}/install/share/iiwa_description/moveit2/dual_kinematics.yaml",
-    "--params-file", "${workspaceFolder}/install/share/grasp_planner/config/params-rs2.yaml" ],
-    "stopAtEntry": false,
-    "cwd": "${workspaceFolder}/",
-    "environment": [
-      
-    ],
-    "externalConsole": false,
-    "MIMode": "gdb",
-    "setupCommands": [
-        {
-            "description": "Enable pretty-printing for gdb",
-            "text": "-enable-pretty-printing",
-            "ignoreFailures": true
+            "name": "Launch graspnet",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/grasp_planner/grasp_planner_service",
+            "args": [
+                "--ros-args",
+                "--params-file",
+                "${workspaceFolder}/install/share/iiwa_description/moveit2/dual_kinematics.yaml",
+                "--params-file",
+                "${workspaceFolder}/install/share/grasp_planner/config/params-rs2.yaml"
+            ],
+            "stopAtEntry": true,
+            "cwd": "${workspaceFolder}/src/grasp_planner/",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
         },
         {
-            "description": "Set Disassembly Flavor to Intel",
-            "text": "-gdb-set disassembly-flavor intel",
-            "ignoreFailures": true
-        }
-    ]
-  },
-  {
-    "name": "Launch reachability",
-    "type": "cppdbg",
-    "request": "launch",
-    "program": "${workspaceFolder}/build/grasp_planner/reachability",
-   
-    "args": ["--ros-args", "--params-file", "${workspaceFolder}/install/share/iiwa_description/moveit2/dual_kinematics.yaml",
-    "--params-file", "${workspaceFolder}/install/share/grasp_planner/config/reachability.yaml" ],
-    "stopAtEntry": true,
-    "cwd": "${workspaceFolder}/src/grasp_planner/",
-    "environment": [
-      
-    ],
-    "externalConsole": false,
-    "MIMode": "gdb",
-    "setupCommands": [
-        {
-            "description": "Enable pretty-printing for gdb",
-            "text": "-enable-pretty-printing",
-            "ignoreFailures": true
+            "name": "Launch graspbox service",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/grasp_box/grasp_box_service",
+            "args": [
+                "--ros-args",
+                "--params-file",
+                "${workspaceFolder}/install/share/iiwa_description/moveit2/dual_kinematics.yaml",
+                "--params-file",
+                "${workspaceFolder}/install/share/grasp_planner/config/params-rs2.yaml"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
         },
         {
-            "description": "Set Disassembly Flavor to Intel",
-            "text": "-gdb-set disassembly-flavor intel",
-            "ignoreFailures": true
-        }
-    ]
-  },
-  {
-    "name": "Launch grasp_box",
-    "type": "cppdbg",
-    "request": "launch",
-    "program": "${workspaceFolder}/build/grasp_box/test_box_detector",
-   
-    "args": [ "depth.png", "segmented_images/rgb.png", "mask.png"],
-    "stopAtEntry": false,
-    "cwd": "${workspaceFolder}",
-    "environment": [
-      
-    ],
-    "externalConsole": false,
-    "MIMode": "gdb",
-    "setupCommands": [
+            "name": "Launch grasp candidate filter service",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/grasp_planner/grasp_candidates_filter_service",
+            "args": [
+                "--ros-args",
+                "--params-file",
+                "${workspaceFolder}/install/share/iiwa_description/moveit2/dual_kinematics.yaml",
+                "--params-file",
+                "${workspaceFolder}/install/share/grasp_planner/config/params-rs2.yaml"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+
         {
-            "description": "Enable pretty-printing for gdb",
-            "text": "-enable-pretty-printing",
-            "ignoreFailures": true
+            "name": "Launch reachability",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/grasp_planner/reachability",
+            "args": [
+                "--ros-args",
+                "--params-file",
+                "${workspaceFolder}/install/share/iiwa_description/moveit2/dual_kinematics.yaml",
+                "--params-file",
+                "${workspaceFolder}/install/share/grasp_planner/config/reachability.yaml"
+            ],
+            "stopAtEntry": true,
+            "cwd": "${workspaceFolder}/src/grasp_planner/",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
         },
         {
-            "description": "Set Disassembly Flavor to Intel",
-            "text": "-gdb-set disassembly-flavor intel",
-            "ignoreFailures": true
-        }
-    ]
-  },
-   {
-    "name": "Attach graspnet",
-    "type": "cppdbg",
-    "request": "attach",
-    "processId":"${command:pickProcess}",
-    "program": "${workspaceFolder}/build/grasp_planner/grasp_planner_service",
-    "externalConsole": false,
-    "MIMode": "gdb",
-    "setupCommands": [
-        {
-            "description": "Enable pretty-printing for gdb",
-            "text": "-enable-pretty-printing",
-            "ignoreFailures": true
+            "name": "Launch grasp_box",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/grasp_box/test_box_detector",
+            "args": [
+                "depth.png",
+                "segmented_images/rgb.png",
+                "mask.png"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
         },
         {
-            "description": "Set Disassembly Flavor to Intel",
-            "text": "-gdb-set disassembly-flavor intel",
-            "ignoreFailures": true
-        }
-    ]
-  },
-  {
-    "name": "Launch virtual camera",
-    "type": "cppdbg",
-    "request": "launch",
-    "program": "${workspaceFolder}/install/lib/ros2_virtual_camera/virtual_camera",
-    "args": ["model.urdf", "mesh.urdf"],
-    "stopAtEntry": true,
-    "cwd": "${workspaceFolder}/",
-    "environment": [],
-    "externalConsole": false,
-    "MIMode": "gdb",
-    "setupCommands": [
-        {
-            "description": "Enable pretty-printing for gdb",
-            "text": "-enable-pretty-printing",
-            "ignoreFailures": true
+            "name": "Attach graspnet",
+            "type": "cppdbg",
+            "request": "attach",
+            "processId": "${command:pickProcess}",
+            "program": "${workspaceFolder}/build/grasp_planner/grasp_planner_service",
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
         },
         {
-            "description": "Set Disassembly Flavor to Intel",
-            "text": "-gdb-set disassembly-flavor intel",
-            "ignoreFailures": true
+            "name": "Launch virtual camera",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/install/lib/ros2_virtual_camera/virtual_camera",
+            "args": [
+                "model.urdf",
+                "mesh.urdf"
+            ],
+            "stopAtEntry": true,
+            "cwd": "${workspaceFolder}/",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
         }
     ]
-  }
-  ]
 }

@@ -1,4 +1,4 @@
-#include <grasp_planner_interfaces/srv/grasp_net.hpp>
+#include <grasp_planner_msgs/msg/grasp.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <rclcpp/rclcpp.hpp>
 

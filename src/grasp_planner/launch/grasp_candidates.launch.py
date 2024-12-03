@@ -174,6 +174,16 @@ def generate_launch_description():
             grasp_candidates_config
         ],
     )
+
+    grasp_candidates_filter_node = Node(
+        package="grasp_planner",
+        executable="grasp_candidates_filter_service",
+        namespace=namespace,
+        output="screen",
+        parameters=[
+             robot_description_kinematics
+        ],
+    )
     
     nodes = [
         robot_launch,
@@ -181,6 +191,7 @@ def generate_launch_description():
         robot_mask_node,
         graspnet_service_node,
         grasp_candidates_node,
+ #       grasp_candidates_filter_node,
         segmentation_node,
         graspbox_service_node
     ]

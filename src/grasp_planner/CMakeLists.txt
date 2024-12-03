@@ -81,7 +81,7 @@ install(TARGETS grasp_planner_service reachability
   ################################## grasp_candidates_service ###########################################
 
 add_executable(grasp_candidates_service
-src/grasp_candidate_service.cpp 
+src/grasp_candidates_service.cpp 
 src/viz.cpp 
 src/grasp_candidates_node.cpp
 src/grasp_candidates_node.hpp
@@ -112,7 +112,42 @@ target_link_libraries(grasp_candidates_service ${OpenCV_LIBS} Eigen3::Eigen cvx 
 
 install(TARGETS grasp_candidates_service DESTINATION lib/${PROJECT_NAME})
 
+################################## grasp_candidates_filter_service ###########################################
+
+add_executable(grasp_candidates_filter_service
+src/grasp_candidates_filter_service.cpp 
+src/viz.cpp 
+src/moveit_ik.cpp
+src/moveit_ik.hpp
+src/grasp_candidates_filter_node.cpp
+src/grasp_candidates_filter_node.hpp
+)
+
+target_include_directories(grasp_candidates_filter_service PUBLIC
+$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+$<INSTALL_INTERFACE:include>
+${OpenCV_INCLUDE_DIRS})
+
+target_compile_features(grasp_candidates_filter_service PUBLIC cxx_std_17)  # Require C++17
+
+ament_target_dependencies(grasp_candidates_filter_service
+  rclcpp  std_msgs sensor_msgs geometry_msgs 
+  cv_bridge Eigen3 cvx
+  visualization_msgs
+  image_transport
+  image_geometry
+  tf2
+  tf2_ros tf2_eigen
+  moveit_ros_planning_interface
+  grasp_planner_msgs
+)
+target_link_libraries(grasp_candidates_filter_service Eigen3::Eigen cvx OpenMP::OpenMP_CXX)
+
+
+install(TARGETS grasp_candidates_filter_service DESTINATION lib/${PROJECT_NAME})
+
 ################################################################################################3
+
 install(
   DIRECTORY launch data config
   DESTINATION share/${PROJECT_NAME}
