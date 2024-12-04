@@ -249,6 +249,7 @@ void GraspCandidatesNode::candidates(const std::shared_ptr<GraspCandidatesSrv::R
 
             grasps_rviz_pub_->publish(convertToVisualGraspMsg(resp_gbox->grasps, 0.05, 0.01, 0.01, "world", {0, 0, 1.0f, 0.5f}, "candidates:graspbox"));
             response->grasps = std::move(resp_gbox->grasps) ;
+            response->boxes = std::move(resp_gbox->boxes) ;
             
         } else  {
             RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "GraspBox service did not respond");

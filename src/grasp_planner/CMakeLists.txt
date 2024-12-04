@@ -146,6 +146,37 @@ target_link_libraries(grasp_candidates_filter_service Eigen3::Eigen cvx OpenMP::
 
 install(TARGETS grasp_candidates_filter_service DESTINATION lib/${PROJECT_NAME})
 
+
+################################## motion_planning_service ###########################################
+
+add_executable(motion_planning_service
+  src/motion_planning_service.cpp 
+  src/motion_planning_node.cpp
+  src/motion_planning_node.hpp
+)
+
+target_include_directories(motion_planning_service PUBLIC
+$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+$<INSTALL_INTERFACE:include>
+${OpenCV_INCLUDE_DIRS})
+
+target_compile_features(motion_planning_service PUBLIC cxx_std_17)  # Require C++17
+
+ament_target_dependencies(motion_planning_service
+  rclcpp  std_msgs sensor_msgs geometry_msgs 
+  cv_bridge Eigen3 cvx
+  visualization_msgs
+  image_transport
+  image_geometry
+  tf2
+  tf2_ros tf2_eigen
+  moveit_ros_planning_interface
+  grasp_planner_msgs
+)
+target_link_libraries(motion_planning_service Eigen3::Eigen cvx OpenMP::OpenMP_CXX)
+
+install(TARGETS motion_planning_service DESTINATION lib/${PROJECT_NAME})
+
 ################################################################################################3
 
 install(

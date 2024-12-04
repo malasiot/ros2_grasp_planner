@@ -1,6 +1,6 @@
 import sys
 
-from grasp_planner_msgs.srv import GraspCandidates, GraspCandidatesFilter
+from grasp_planner_msgs.srv import GraspCandidates, GraspCandidatesFilter, MotionPlanning
 
 import rclpy
 from rclpy.node import Node
@@ -12,15 +12,19 @@ class ClientAsync(Node):
         super().__init__('client_async')
         self.grasp_candidates_cli = self.create_client(GraspCandidates, 'grasp_candidates_service')
         self.grasp_filter_cli     = self.create_client(GraspCandidatesFilter, 'grasp_candidates_filter_service')
+        self.motion_planning_cli     = self.create_client(MotionPlanning, 'motion_planning_service')
 
         while not self.grasp_candidates_cli.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('Grasp candidates service not available, waiting again...')
         while not self.grasp_filter_cli.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('Grasp candidates filter service not available, waiting again...')
+        while not self.motion_planning_cli.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('Grasp candidates filter service not available, waiting again...')
                 
     def send_request(self):
-        self.req = GraspCandidates.Request()
-        self.future = self.grasp_candidates_cli.call_async(self.req)
+        req = GraspCandidates.Request()
+        req.algorithm = 1
+        self.future = self.grasp_candidates_cli.call_async(req)
         rclpy.spin_until_future_complete(self, self.future)
         response = self.future.result() ;
 
@@ -30,7 +34,15 @@ class ClientAsync(Node):
         rclpy.spin_until_future_complete(self, self.future)
         response = self.future.result() ;
 
-        return response
+        if response.grasps: 
+            req = MotionPlanning.Request()
+            req.left_arm_js = response.grasps[0].jl ;
+            req.right_arm_js = response.grasps[0].jr ;
+            self.future = self.motion_planning_cli.call_async(req)
+            rclpy.spin_until_future_complete(self, self.future)
+            response = self.future.result() ;
+
+            return response
 
 
 def main(args=None):

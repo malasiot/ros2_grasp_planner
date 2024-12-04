@@ -347,7 +347,7 @@ void GraspCandidatesFilterNode::filter(const std::shared_ptr<GraspCandidatesFilt
 
     std::vector<grasp_planner_msgs::msg::FilteredGrasp> filtered_grasps ;
 
-    for( uint i=0 ; i<max_results ; i++ ) {
+    for( uint i=0 ; i<std::min(max_results, results.size()) ; i++ ) {
         grasp_planner_msgs::msg::FilteredGrasp fg ;
 
         const GraspCandidate &result = results[i] ;
@@ -368,6 +368,9 @@ void GraspCandidatesFilterNode::filter(const std::shared_ptr<GraspCandidatesFilt
         fg.rq.y = result.rdir_.y() ;
         fg.rq.z = result.rdir_.z() ;
         fg.rq.w = result.rdir_.w() ;
+
+        fg.jl = result.jl_ ;
+        fg.jr = result.jr_ ;
 
         response->grasps.emplace_back(fg) ;
     }

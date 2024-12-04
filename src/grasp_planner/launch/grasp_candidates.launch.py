@@ -184,6 +184,16 @@ def generate_launch_description():
              robot_description_kinematics
         ],
     )
+
+    motion_planning_node = Node(
+        package="grasp_planner",
+        executable="motion_planning_service",
+        namespace=namespace,
+        output="screen",
+        parameters=[
+             robot_description_kinematics
+        ],
+    )
     
     nodes = [
         robot_launch,
@@ -191,7 +201,8 @@ def generate_launch_description():
         robot_mask_node,
         graspnet_service_node,
         grasp_candidates_node,
- #       grasp_candidates_filter_node,
+        grasp_candidates_filter_node,
+        motion_planning_node,
         segmentation_node,
         graspbox_service_node
     ]

@@ -5,3 +5,4 @@ sensor_msgs/CameraInfo camera_info
 geometry_msgs/Transform camera_pose
 ---
 grasp_planner_msgs/Grasp[] grasps   
+grasp_planner_msgs/Box3D[] boxes

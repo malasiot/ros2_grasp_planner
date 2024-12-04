@@ -365,8 +365,15 @@ vector<Box> findBoxClusters(const PointCloud &pts, const PointCloud &normals, co
             pj_pts.emplace_back(p.x(), p.y());
         cv::RotatedRect rect = cv::minAreaRect(pj_pts);
 
+        if ( rect.angle > 45 ) {
+            rect.angle = 90 - rect.angle ;
+            rect.size = cv::Size2f(rect.size.height, rect.size.width) ;
+        }
+        
         Box box ;
         box.theta_ = rect.angle * M_PI / 180.0;
+        cout << rect.angle << ' ' << rect.size.width << ' ' << rect.size.height << endl ;
+
         box.center_ = Vector3f{rect.center.x, rect.center.y, minz + height / 2.0};
         box.sz_ = Vector3f{rect.size.width, rect.size.height, height};
 

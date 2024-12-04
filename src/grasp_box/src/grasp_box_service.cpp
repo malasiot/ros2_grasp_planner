@@ -9,6 +9,7 @@
 #include <cvx/math/rng.hpp>
 
 #include <grasp_planner_msgs/msg/grasp.hpp>
+#include <grasp_planner_msgs/msg/box3_d.hpp>
 
 using namespace std;
 using namespace Eigen;
@@ -81,7 +82,29 @@ void GraspBoxService::visualizeBoxes(const std::vector<Box> &boxes)
     boxes_rviz_pub_->publish(marker_array);
 }
 
-static void makeSideGrasp(const Box &box, std::vector<grasp_planner_msgs::msg::Grasp> &grasps, float dist, float width, float height, float offset) {
+void serializeBoxes(const std::vector<Box> &boxes, std::vector<grasp_planner_msgs::msg::Box3D> &msgs) {
+    for( const auto &box: boxes ) {
+        grasp_planner_msgs::msg::Box3D msg ;
+        msg.center.position.x = box.center_.x() ;
+        msg.center.position.y = box.center_.y() ;
+        msg.center.position.z = box.center_.z() ;
+        
+        float theta2 = box.theta_/2.0 ;
+        msg.center.orientation.x = 0;
+        msg.center.orientation.y = 0;
+        msg.center.orientation.z = sin(theta2);
+        msg.center.orientation.w = cos(theta2);
+
+        // these scales are relative to the hand frame (unit: meters)
+        msg.size.x = box.sz_.x() ;
+        msg.size.y = box.sz_.y() ;
+        msg.size.z = box.sz_.z() ;
+
+        msgs.emplace_back(msg) ;
+    }
+}
+
+static void makeSideGrasp(uint box_id, const Box &box, std::vector<grasp_planner_msgs::msg::Grasp> &grasps, float dist, float width, float height, float offset) {
     grasp_planner_msgs::msg::Grasp grasp ;
 
     Vector3f center{-box.sz_.x()/2, 0, offset} ;
@@ -104,17 +127,20 @@ static void makeSideGrasp(const Box &box, std::vector<grasp_planner_msgs::msg::G
     grasp.translation.z = c.z() ;
 
     grasp.score = 1 - 0.5 * fabs(offset)/box.sz_.z() ;
+    grasp.box_id = box_id ;
 
     grasps.emplace_back(std::move(grasp)) ;
 }
 
 static void makeGrasps(const std::vector<Box> &boxes, std::vector<grasp_planner_msgs::msg::Grasp> &grasps, float dist, float height, float clearance) {
     const float offset_step = 0.05f ;
+    uint count = 0 ;
     for(const auto &box: boxes) {
         grasp_planner_msgs::msg::Grasp g ;
         for( float offset = -box.sz_.z()/2 ; offset < box.sz_.z()/2 ; offset += offset_step ) {
-            makeSideGrasp(box, grasps, dist, box.sz_.y() + clearance * 2, height, offset) ;
+            makeSideGrasp(count, box, grasps, dist, box.sz_.y() + clearance * 2, height, offset) ;
         }
+        ++count ;
     }
 }
 
@@ -189,4 +215,6 @@ void GraspBoxService::callback(const std::shared_ptr<GraspBoxSrv::Request> reque
     makeGrasps(boxes, response->grasps, 0.05, 0.05, 0.05) ;
 
     visualizeBoxes(boxes) ;
+
+    serializeBoxes(boxes, response->boxes) ;
 }
